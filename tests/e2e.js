@@ -47,7 +47,7 @@ async function tapAt(page, p, touch) { if (touch) await page.touchscreen.tap(p.x
 
 async function localFlow(browser, base, vp, name) {
   console.log(`[端末内モード] ${name} ${vp.width}×${vp.height}`);
-  const { ctx, page } = await newPage(browser, vp, name);
+  const { ctx, page } = await newPage(browser, vp, name, { acceptDownloads: true });
   const touch = vp.width < 800;
   await page.goto(base + '#/home'); await page.waitForTimeout(400);
   await step('ホーム', async () => { assert.match(await page.textContent('#shareStatus'), /端末内/); await page.shot('01-home'); });
@@ -128,6 +128,8 @@ async function localFlow(browser, base, vp, name) {
     assert.ok(await page.locator('#tPosts li.hid').count() === 1);
     const st = await page.evaluate(() => Share.state()); assert.strictEqual(st.posts.length, 0);
     await page.click('#tPosts button[data-op=unhide]'); await page.waitForTimeout(200);
+    assert.strictEqual(await page.locator('#tLinks li').count(), 7);
+    assert.match(await page.getAttribute('#tLinks li:nth-child(2) button', 'data-link'), /#\/brush$/);
     await page.shot('12-teacher');
   });
 
@@ -138,7 +140,11 @@ async function localFlow(browser, base, vp, name) {
     await page.fill('#rfText', '白は、松が続いていると想像させる余地だった。');
     const out = await page.inputValue('#rfOut');
     for (const re of [/前 13点（バランス派） → 後 6点（余白たのしみ派）/, /濃さ 64/, /位置 92（荒い筆寄り）/, /・霧の向こうに続く松の道/, /想像させる余地/]) assert.match(out, re);
+    assert.match(out, /書き出した日時：/); assert.match(out, /名前や番号を書き加えて/);
     await page.click('#rfCopy'); await page.waitForTimeout(200); assert.match(await page.textContent('#rfMsg'), /コピー/);
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#rfSave')]);
+    assert.match(dl.suggestedFilename(), /^空白の意味_振り返り_.*\.txt$/);
+    const txt = fs.readFileSync(await dl.path(), 'utf8'); assert.match(txt, /霧の向こうに続く松の道/);
     await page.shot('13-reflect');
   });
 
@@ -148,7 +154,33 @@ async function localFlow(browser, base, vp, name) {
     await page.shot('14-lesson-forest'); await page.click('#lessonBtn');
   });
 
+  await step('授業設定（大きな文字・軽量の描画）', async () => {
+    await page.goto(base + '#/home'); await page.click('#setBtn'); await page.waitForSelector('#setDlg[open]');
+    await page.check('#setDlg [data-pref=lesson]'); assert.ok(await page.evaluate(() => document.body.classList.contains('lesson')));
+    await page.shot('16-settings');
+    await page.uncheck('#setDlg [data-pref=lesson]');
+    await Promise.all([page.waitForEvent('load'), page.click('#qSel [data-q="0"]')]);
+    assert.strictEqual(await page.evaluate(() => Q.level), 0);
+    await page.click('#setBtn'); await Promise.all([page.waitForEvent('load'), page.click('#qSel [data-q="auto"]')]);
+  });
+
+  await step('文字を隠す（H キー・タップで戻る）', async () => {
+    await page.goto(base + '#/forest'); await page.waitForTimeout(500);
+    await page.click('#hideBtn2'); assert.ok(await page.isHidden('#walkF'));
+    const box = await page.locator('#forestCv').boundingBox(); await page.mouse.click(box.x + 20, box.y + 20); await page.waitForTimeout(100);
+    assert.ok(await page.isVisible('#walkF'));
+    await page.keyboard.press('h'); assert.ok(await page.isHidden('#walkF')); await page.keyboard.press('h');
+  });
+
+  await step('うめたい度は 1〜4 キーでも答えられる', async () => {
+    await page.goto(base + '#/check/pre');
+    await page.evaluate(() => { checkAns = [0, 0, 0, 0, 0, 0]; });
+    for (const k of '432143') await page.keyboard.press(k);
+    assert.ok(!(await page.isDisabled('#checkDone')));
+  });
+
   await step('画面の回転', async () => {
+    await page.goto(base + '#/forest'); await page.waitForTimeout(400);
     await page.setViewportSize({ width: vp.height, height: vp.width }); await page.waitForTimeout(600);
     const [w, cw] = await page.evaluate(() => [forest.W, document.querySelector('#forestCv').getBoundingClientRect().width]); assert.ok(Math.abs(w - cw) < 2, `${w} ${cw}`);
     const sw = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1); assert.ok(sw, '横スクロールが出ている');
@@ -160,6 +192,7 @@ async function localFlow(browser, base, vp, name) {
     await p2.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } }); });
     await p2.goto(base + '#/forest'); await p2.waitForTimeout(600);
     await setRange(p2, '#mistRange', 30); await p2.click('#mistRec'); await p2.waitForTimeout(200);
+    assert.ok(await p2.isVisible('#saveWarn'), '保存できない警告が出ていない');
     assert.deepStrictEqual(p2.errors, []); await c2.close();
   });
 
@@ -240,7 +273,7 @@ async function gasFlow(browser, base) {
 (async () => {
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}/index.html`;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ env: Object.assign({}, process.env, { LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' }) }); // 日本語のファイル名を保つため
   try {
     await localFlow(browser, base, { width: 360, height: 740 }, 'phone');
     await localFlow(browser, base, { width: 1366, height: 768 }, 'chromebook');
