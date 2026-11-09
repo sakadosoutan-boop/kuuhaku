@@ -26,8 +26,10 @@ let count = 0;
 const step = async (name, fn) => { await fn(); count++; console.log('  ok', name); };
 
 async function newPage(browser, vp, name, extra = {}) {
-  const ctx = await browser.newContext(Object.assign({ viewport: vp, deviceScaleFactor: 1, hasTouch: vp.width < 800, isMobile: vp.width < 800, locale: 'ja-JP' }, extra));
+  const { noSensors, ...opts } = extra;
+  const ctx = await browser.newContext(Object.assign({ viewport: vp, deviceScaleFactor: 1, hasTouch: vp.width < 800, isMobile: vp.width < 800, locale: 'ja-JP' }, opts));
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  if (!noSensors) await ctx.grantPermissions(['accelerometer', 'gyroscope', 'magnetometer']).catch(() => {}); // 屏風モードの「傾きで見る」
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', e => page.errors.push(e.message));
@@ -115,6 +117,31 @@ async function localFlow(browser, base, vp, name) {
     await page.shot('17-real');
   });
 
+  await step('屏風モード（WebGL・見る位置・折り方・絵の切り替え・傾き）', async () => {
+    await page.goto(base + '#/byobu'); await page.waitForFunction(() => Byobu.mode === 'gl' || Byobu.mode === 'css', null, { timeout: 15000 });
+    assert.strictEqual(await page.evaluate(() => Byobu.mode), 'gl', 'WebGL で表示されていない');
+    await page.waitForTimeout(800); await page.shot('18-byobu');
+    await page.click('#byViews [data-v=seat]'); await page.waitForTimeout(1200);
+    assert.ok(await page.evaluate(() => Byobu.st.ty < 0.8 && Byobu.view === 'seat'));
+    const z0 = await page.evaluate(() => Byobu.layout.panels[0].cz); await setRange(page, '#byFold', 55);
+    const z1 = await page.evaluate(() => Byobu.layout.panels[0].cz); assert.ok(Math.abs(z1) > Math.abs(z0), '折り方が変わらない');
+    assert.match(await page.textContent('#byCredit'), /ColBase/);
+    await page.click('#bySrc'); await page.waitForFunction(() => Byobu.src === 'ink'); assert.match(await page.textContent('#byCredit'), /教材の創作/);
+    await page.click('#bySrc'); await page.waitForFunction(() => Byobu.src === 'real');
+    await page.click('#byTilt'); await page.waitForTimeout(100);
+    const yaw = await page.evaluate(async () => { const f = (b, g) => window.dispatchEvent(Object.assign(new Event('deviceorientation'), { beta: b, gamma: g })); f(60, 0); f(60, 30); await new Promise(r => setTimeout(r, 50)); return Byobu.st.yaw; });
+    assert.ok(Math.abs(yaw) > 0.3, '傾きで回りこめない ' + yaw);
+    await page.click('#byTilt');
+    const box = await page.locator('#byobuStage').boundingBox(); const y0 = await page.evaluate(() => Byobu.st.yaw);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 5 }); await page.mouse.up();
+    assert.ok(await page.evaluate(y0 => Math.abs(Byobu.st.yaw - y0) > 0.3, y0), 'ドラッグで回りこめない');
+    const { ctx: c3, page: p3 } = await newPage(browser, vp, name + '-css', { noSensors: true });
+    await p3.goto(base + '?nogl=1#/byobu'); await p3.waitForFunction(() => Byobu.mode === 'css', null, { timeout: 15000 }); await p3.waitForTimeout(600);
+    assert.strictEqual(await p3.locator('#byobuCam .pnl').count(), 12); assert.match(await p3.textContent('#byMode'), /軽量/);
+    await p3.click('#byTilt'); await p3.waitForTimeout(200); assert.match(await p3.textContent('#byTiltMsg'), /許可されませんでした|使えません|読み取れません/);
+    await p3.screenshot({ path: path.join(SHOTS, `${name}-19-byobu-css.png`) }); assert.deepStrictEqual(p3.errors, []); await c3.close();
+  });
+
   await step('白の向こうに書く', async () => {
     await page.goto(base + '#/write'); await page.waitForTimeout(900);
     const p = await findWhite(page); assert.ok(p, '白い所が見つからない');
@@ -147,7 +174,7 @@ async function localFlow(browser, base, vp, name) {
     assert.ok(await page.locator('#tPosts li.hid').count() === 1);
     const st = await page.evaluate(() => Share.state()); assert.strictEqual(st.posts.length, 0);
     await page.click('#tPosts button[data-op=unhide]'); await page.waitForTimeout(200);
-    assert.strictEqual(await page.locator('#tLinks li').count(), 8);
+    assert.strictEqual(await page.locator('#tLinks li').count(), 9);
     assert.match(await page.getAttribute('#tLinks li:nth-child(2) button', 'data-link'), /#\/brush$/);
     await page.shot('12-teacher');
   });

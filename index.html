@@ -218,6 +218,14 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
 .realmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;text-align:center;padding:16px}
 .realmsg[hidden]{display:none}
 .credit{font-size:.78rem;color:var(--sumi);line-height:1.5}
+.stage.byobu{background:#ece8de;touch-action:none}
+.css3d{position:absolute;inset:0;overflow:hidden;perspective:900px;perspective-origin:50% 45%}
+.css3d[hidden]{display:none}
+.css3d .cam{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
+.css3d .pnl{position:absolute;background-repeat:no-repeat;background-color:#f3f0e8;backface-visibility:hidden;box-shadow:inset 0 0 0 1px rgba(60,40,20,.35)}
+.bymsg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(28,28,28,.82);color:#fff;padding:8px 14px;border-radius:8px;font-size:.9rem;text-align:center;z-index:3;max-width:90%}
+.bymsg[hidden]{display:none}
+#byViews .btn[aria-pressed=true]{background:var(--ink);color:#fff}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion:reduce){.tapmark{animation:none}}
 </style>
@@ -266,7 +274,7 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
     <li><a href="#/real"><span class="n">実</span><b>実物を見る（いつでも）</b><small>本物の松林図屏風を拡大して、教材の絵と見比べる</small></a></li>
     <li><a href="#/write"><span class="n">4</span><b>白の向こうに書く（10分）</b><small>白い霧をタップして、そこにあるものを一行で</small></a></li>
     <li><a href="#/reflect"><span class="n">5</span><b>振り返り（5分）</b><small>うめたい度（後）・掛け軸の目盛り・記録をコピー</small></a></li>
-    <li><a href="#/byobu" class="later"><span class="n">屏</span><b>屏風モード（準備中）</b><small>六曲一双を折れた画面で見る（第3段階）</small></a></li>
+    <li><a href="#/byobu"><span class="n">屏</span><b>屏風モード</b><small>六曲一双を折れた画面で見る。座って見る・傾けて見る</small></a></li>
   </ol>
 
   <div class="card">
@@ -479,9 +487,35 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
 
 <!-- ============ 屏風モード ============ -->
 <section id="s-byobu" class="screen">
-  <h2>屏風モード（準備中）</h2>
-  <p>六曲一双の屏風を 3D で表示し、折れた画面を見る体験は、第3段階で追加します。それまでは、教科書 p.146〜147 の図版を、本を少し折り曲げるようにして眺めてみよう。</p>
-  <a class="btn" href="#/home">ホームへ</a>
+  <div class="passage"><span class="ref">149・7／149・16</span>
+    <p>（要旨）描いているのは松の木より、松の木々の間の空間。余白の中を自在に視線を泳がせる浮遊感。左隻右上の霊峰は白の中の白、最も遠い遠景。</p></div>
+  <p class="q">屏風は折って立てるもの。見る位置や折り方を変えると、松と白い間合いはどう見えるだろう。</p>
+  <div class="exp">
+    <div class="stage byobu" id="byobuStage">
+      <canvas id="byobuCv" aria-label="六曲一双の松林図屏風を3Dで表示。ドラッグで回りこむ"></canvas>
+      <div class="css3d" id="byobuCss" hidden><div class="cam" id="byobuCam"></div></div>
+      <div class="badge" id="byMode">読み込み中…</div>
+      <div class="hud">
+        <button class="chip" id="bySrc" aria-pressed="true">絵：本物</button>
+        <button class="chip" id="byTilt" aria-pressed="false">傾きで見る</button>
+      </div>
+      <div class="bymsg" id="byMsg" hidden></div>
+      <p class="hint">ドラッグで回りこむ／ピンチ・ホイールで近づく</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">見る位置</h3>
+      <div class="row" id="byViews">
+        <button class="btn" data-v="front">全体</button><button class="btn" data-v="right">右隻</button><button class="btn" data-v="left">左隻</button>
+        <button class="btn" data-v="seat">座って見る</button><button class="btn" data-v="side">斜めから</button>
+      </div>
+      <div class="slider-label"><label for="byFold">折り方</label><output id="byFoldOut">32°</output></div>
+      <input type="range" id="byFold" min="0" max="60" step="1" value="32">
+      <div class="ticks"><span>0°<br>平らに広げる</span><span>60°<br>深く折る</span></div>
+      <p class="msg" id="byTiltMsg" role="status"></p>
+      <details class="think"><summary>考えよう</summary><p>平らな図版と、折って立てた屏風。斜めから見ると、となりの扇の松が重なったり離れたりして、白い間合いが変わる（149・7）。畳に座った目の高さで見ると、霊峰（左隻の右上）はどう見えるだろう（149・16）。</p></details>
+      <p class="credit" id="byCredit"></p>
+    </div>
+  </div>
 </section>
 
 <!-- ============ 教員用 ============ -->
@@ -1677,12 +1711,267 @@ $('#realHs').addEventListener('click', e => { const on = e.currentTarget.getAttr
 $('#realTrack').addEventListener('dblclick', () => realZoom(realZ >= 3.9 ? 1 : realZ * 1.6));
 
 /* ---------- 屏風（準備中） ---------- */
-Screens.byobu = { title: '屏風モード' };
+/* =========================================================
+   屏風モード（three.js r128 を vendor/ から必要なときだけ読み込む）
+   ========================================================= */
+const BY = { W: 3.56 / 6, H: 1.568, GAP: 0.28 };
+const BY_CREDIT = {
+  real: '絵：ColBase（国立文化財機構所蔵品統合検索システム）<a href="https://colbase.nich.go.jp/collection_items/tnm/A-10471" target="_blank" rel="noopener">「松林図屏風」</a>　長谷川等伯筆／東京国立博物館蔵／国宝。画像を縮小し、六扇に分けて折れた屏風に貼っています（この教材による加工）。',
+  ink: '絵：教材の創作（松林図をもとに、筆の打ち込みを重ねてプログラムで描いた水墨風の絵）。本物は「絵：本物」で見られます。',
+};
+function byobuLayout(fold) {
+  const out = [];
+  const one = () => { const P = [[0, 0]]; for (let k = 0; k < 6; k++) { const sgn = k % 2 ? -1 : 1, [x, z] = P[k]; P.push([x + BY.W * Math.cos(fold), z + sgn * BY.W * Math.sin(fold)]); } return P; };
+  const P = one(), w = P[6][0], mz = P.reduce((a, p) => a + p[1], 0) / P.length;
+  for (const side of ['left', 'right']) {
+    const ox = side === 'left' ? -w - BY.GAP / 2 : BY.GAP / 2;
+    for (let k = 0; k < 6; k++) {
+      const sgn = k % 2 ? -1 : 1;
+      out.push({ side, k, cx: ox + (P[k][0] + P[k + 1][0]) / 2, cz: (P[k][1] + P[k + 1][1]) / 2 - mz, rot: -sgn * fold });
+    }
+  }
+  return { panels: out, width: w * 2 + BY.GAP, one: w };
+}
+function loadScript(src) {
+  return new Promise((ok, ng) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = ng; document.head.appendChild(el); });
+}
+function glSupported() {
+  try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl'))); } catch (e) { return false; }
+}
+/* 教材の絵：松林図の構図（四つほどの松のまとまりと、右上の霊峰）にならって描く */
+function paintInkByobu(side) {
+  Sprites.ensure();
+  const W = 2048, H = Math.round(W * BY.H / 3.56), c = newCanvas(W, H), g = c.getContext('2d'), r = rng(side === 'right' ? 41 : 73);
+  g.fillStyle = '#4a3a2a'; g.fillRect(0, 0, W, H);
+  const m = Math.round(H * 0.035); g.fillStyle = '#b9a77e'; g.fillRect(m * 0.4, m * 0.4, W - m * 0.8, H - m * 0.8);
+  g.fillStyle = '#f2eee3'; g.fillRect(m, m, W - 2 * m, H - 2 * m);
+  g.save(); g.beginPath(); g.rect(m, m, W - 2 * m, H - 2 * m); g.clip();
+  const groups = side === 'right' ? [[0.22, 1.0, 5], [0.42, 0.55, 3], [0.82, 0.9, 4]] : [[0.18, 0.6, 3], [0.38, 0.95, 4], [0.62, 0.75, 4], [0.78, 0.5, 2]];
+  for (const [gx, strength, n] of groups) {
+    for (let i = 0; i < n; i++) {
+      const far = i > 0, sp = Sprites.rough[(i + Math.floor(gx * 10)) % Sprites.rough.length];
+      const hgt = H * (far ? 0.55 + r() * 0.25 : 0.8 + r() * 0.12), sc = hgt / sp.S, dw = sp.w * sc, dh = sp.h * sc;
+      const x = W * (gx + (r() - 0.5) * 0.12) - sp.ax * dw, y = H * (0.9 - (far ? r() * 0.12 : 0)) - sp.ay * dh;
+      g.globalAlpha = far ? 0.18 + 0.25 * strength * r() : 0.55 + 0.4 * strength;
+      g.drawImage(far ? sp.s : sp.c, x, y, dw, dh);
+    }
+  }
+  g.globalAlpha = 1;
+  for (let i = 0; i < 6; i++) { const y = H * (0.45 + r() * 0.3), gr = g.createLinearGradient(0, y - H * 0.18, 0, y + H * 0.18); gr.addColorStop(0, 'rgba(242,238,227,0)'); gr.addColorStop(0.5, 'rgba(242,238,227,0.55)'); gr.addColorStop(1, 'rgba(242,238,227,0)'); g.fillStyle = gr; g.fillRect(0, y - H * 0.18, W, H * 0.36); }
+  if (side === 'left') { g.globalAlpha = 0.75; g.drawImage(Sprites.peak, W * 0.8, H * 0.06, W * 0.17, W * 0.17 * 190 / 360); g.globalAlpha = 1; }
+  g.restore();
+  g.strokeStyle = 'rgba(60,40,20,.35)'; g.lineWidth = 2; for (let k = 1; k < 6; k++) { const x = m + (W - 2 * m) * k / 6; g.beginPath(); g.moveTo(x, m); g.lineTo(x, H - m); g.stroke(); }
+  return c;
+}
+const Byobu = {
+  mode: null, src: 'real', st: { yaw: 0, pitch: 0.04, dist: 9, tx: 0, ty: 0.85 }, goal: null, fold: 32 * Math.PI / 180,
+  imgs: {}, canvases: {}, tex: {}, tilt: null, loop: false, view: 'front',
+  async init() {
+    if (this.mode) return;
+    this.mode = 'pending';
+    const forceCss = new URLSearchParams(location.search).get('nogl') === '1';
+    if (!forceCss && glSupported()) {
+      try { if (!window.THREE) await loadScript('vendor/three.min.js'); if (!window.THREE) throw new Error('no three'); this.initGL(); this.mode = 'gl'; }
+      catch (e) { this.mode = 'css'; }
+    } else this.mode = 'css';
+    if (this.mode === 'css') this.initCss();
+    $('#byMode').textContent = this.mode === 'gl' ? '3D（WebGL）' : '軽量の3D表示';
+    await this.setSrc(this.src);
+    this.setView(this.view, true);
+  },
+  image(side) {
+    if (this.imgs[side]) return this.imgs[side];
+    return (this.imgs[side] = new Promise(ok => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = `assets/shorinzu-${side}.jpg`; }));
+  },
+  async sources(src) {
+    const out = {};
+    for (const side of ['left', 'right']) {
+      if (src === 'real') out[side] = await this.image(side);
+      if (!out[side]) { if (!this.canvases[side]) this.canvases[side] = paintInkByobu(side); out[side] = this.canvases[side]; }
+    }
+    return out;
+  },
+  async setSrc(src) {
+    const got = await this.sources(src);
+    const isReal = src === 'real' && got.left instanceof HTMLImageElement;
+    if (src === 'real' && !isReal) { this.msg('本物の画像を読み込めませんでした。教材の絵で表示します。', 3000); src = 'ink'; }
+    this.src = src;
+    $('#bySrc').textContent = src === 'real' ? '絵：本物' : '絵：教材の創作'; $('#bySrc').setAttribute('aria-pressed', String(src === 'real'));
+    $('#byCredit').innerHTML = BY_CREDIT[src];
+    if (this.mode === 'gl') {
+      for (const side of ['left', 'right']) {
+        const t = new THREE.Texture(got[side]); t.encoding = THREE.sRGBEncoding; t.anisotropy = Math.min(4, this.r.capabilities.getMaxAnisotropy()); t.needsUpdate = true;
+        if (this.tex[side]) this.tex[side].dispose(); this.tex[side] = t; this.mats[side].map = t; this.mats[side].needsUpdate = true;
+      }
+    } else {
+      for (const side of ['left', 'right']) { const url = got[side] instanceof HTMLImageElement ? got[side].src : got[side].toDataURL('image/jpeg', 0.85); $$(`#byobuCam .pnl[data-side="${side}"]`).forEach(d => { d.style.backgroundImage = `url("${url}")`; }); }
+    }
+    this.render();
+  },
+  initGL() {
+    const cv = $('#byobuCv');
+    const r = this.r = new THREE.WebGLRenderer({ canvas: cv, antialias: Q.level > 0, powerPreference: 'low-power' });
+    r.outputEncoding = THREE.sRGBEncoding; r.setClearColor(0xece8de);
+    this.scene = new THREE.Scene(); this.scene.fog = new THREE.Fog(0xece8de, 10, 26);
+    this.cam = new THREE.PerspectiveCamera(38, 1, 0.05, 60);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+    const dl = new THREE.DirectionalLight(0xfff6e8, 0.55); dl.position.set(-4, 5, 6); this.scene.add(dl);
+    /* 畳の床と、屏風の足もとの淡い影 */
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshLambertMaterial({ color: 0xd9d1bb }));
+    floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
+    const sh = newCanvas(64, 64), sg = sh.getContext('2d'), gr = sg.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); sg.fillStyle = gr; sg.fillRect(0, 0, 64, 64);
+    this.shadowTex = new THREE.CanvasTexture(sh);
+    this.mats = { left: new THREE.MeshLambertMaterial({ color: 0xffffff }), right: new THREE.MeshLambertMaterial({ color: 0xffffff }) };
+    this.backMat = new THREE.MeshLambertMaterial({ color: 0xcfc6ae, side: THREE.BackSide });
+    this.group = new THREE.Group(); this.scene.add(this.group);
+    this.buildGL();
+    this.resize();
+  },
+  buildGL() {
+    const grp = this.group; while (grp.children.length) { const m = grp.children.pop(); if (m.geometry) m.geometry.dispose(); }
+    const L = byobuLayout(this.fold);
+    for (const p of L.panels) {
+      const geo = new THREE.PlaneGeometry(BY.W, BY.H), uv = geo.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setX(i, (p.k + uv.getX(i)) / 6);
+      uv.needsUpdate = true;
+      const front = new THREE.Mesh(geo, this.mats[p.side]), back = new THREE.Mesh(geo, this.backMat);
+      for (const m of [front, back]) { m.position.set(p.cx, BY.H / 2 + 0.02, p.cz); m.rotation.y = p.rot; grp.add(m); }
+    }
+    for (const side of [-1, 1]) {
+      const s = new THREE.Mesh(new THREE.PlaneGeometry(L.one * 1.15, 0.9), new THREE.MeshBasicMaterial({ map: this.shadowTex, transparent: true, depthWrite: false }));
+      s.rotation.x = -Math.PI / 2; s.position.set(side * (L.one + BY.GAP) / 2, 0.003, 0.05); grp.add(s);
+    }
+    this.layout = L;
+  },
+  initCss() {
+    $('#byobuCv').hidden = true; $('#byobuCss').hidden = false;
+    const cam = $('#byobuCam'); cam.innerHTML = '';
+    for (let i = 0; i < 12; i++) { const d = document.createElement('div'); d.className = 'pnl'; cam.appendChild(d); }
+    this.buildCss();
+  },
+  buildCss() {
+    const L = this.layout = byobuLayout(this.fold), S = 100;
+    $$('#byobuCam .pnl').forEach((d, i) => {
+      const p = L.panels[i]; d.dataset.side = p.side;
+      Object.assign(d.style, { width: BY.W * S + 'px', height: BY.H * S + 'px', marginLeft: -BY.W * S / 2 + 'px', marginTop: -BY.H * S + 'px', backgroundSize: '600% 100%', backgroundPosition: `${p.k * 20}% 0`, transform: `translate3d(${p.cx * S}px, 0, ${p.cz * S}px) rotateY(${-p.rot}rad)` });
+    });
+  },
+  setFold(deg) {
+    this.fold = deg * Math.PI / 180; $('#byFoldOut').textContent = deg + '°';
+    if (this.mode === 'gl') this.buildGL(); else if (this.mode === 'css') this.buildCss();
+    this.render();
+  },
+  fit(width) {
+    const asp = (this.Wpx || 1) / (this.Hpx || 1), vf = 38 * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * asp);
+    return Math.max((width / 2) / Math.tan(hf / 2), (BY.H * 0.62) / Math.tan(vf / 2)) * 1.08;
+  },
+  setView(v, instant) {
+    this.view = v; $$('#byViews .btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    const L = this.layout || byobuLayout(this.fold), oneX = (L.one + BY.GAP) / 2;
+    const G = {
+      front: { yaw: 0, pitch: 0.03, dist: this.fit(L.width), tx: 0, ty: 0.85 },
+      right: { yaw: 0, pitch: 0.03, dist: this.fit(L.one), tx: oneX, ty: 0.85 },
+      left: { yaw: 0, pitch: 0.03, dist: this.fit(L.one), tx: -oneX, ty: 0.85 },
+      seat: { yaw: 0, pitch: -0.02, dist: Math.min(this.fit(L.width) * 0.62, 5), tx: 0, ty: 0.78 },
+      side: { yaw: -0.72, pitch: 0.08, dist: this.fit(L.width) * 0.85, tx: 0, ty: 0.85 },
+    }[v];
+    if (this.tilt) this.tilt.base = null;
+    if (instant) { Object.assign(this.st, G); this.goal = null; this.render(); } else { this.goal = G; this.kick(); }
+  },
+  kick() { if (this.loop) return; this.loop = true; const step = () => { if (!this.loop) return; const more = this.tick(); this.draw(); if (more) requestAnimationFrame(step); else this.loop = false; }; requestAnimationFrame(step); },
+  tick() {
+    if (!this.goal) return false;
+    let more = false;
+    for (const k of Object.keys(this.goal)) { const d = this.goal[k] - this.st[k]; this.st[k] += d * 0.16; if (Math.abs(d) > 1e-3) more = true; else this.st[k] = this.goal[k]; }
+    if (!more) this.goal = null;
+    return more;
+  },
+  render() { if (!this.loop) requestAnimationFrame(() => this.draw()); },
+  draw() {
+    const s = this.st;
+    if (this.mode === 'gl') {
+      const cy = Math.cos(s.pitch);
+      this.cam.position.set(s.tx + s.dist * Math.sin(s.yaw) * cy, s.ty + s.dist * Math.sin(s.pitch), s.dist * Math.cos(s.yaw) * cy);
+      this.cam.lookAt(s.tx, s.ty, 0); this.r.render(this.scene, this.cam);
+    } else if (this.mode === 'css') {
+      const S = 100, k = Math.min(this.Wpx, this.Hpx * 1.6) / (this.layout.width * S) * (this.fit(this.layout.width) / s.dist) * 0.95;
+      $('#byobuCss').style.perspective = (s.dist * S) + 'px';
+      $('#byobuCam').style.transform = `translateY(${(BY.H / 2) * S * k}px) scale(${k}) rotateX(${-s.pitch}rad) rotateY(${-s.yaw}rad) translateX(${-s.tx * S}px)`;
+    }
+  },
+  resize() {
+    const r = $('#byobuStage').getBoundingClientRect(); if (r.width < 2) return;
+    this.Wpx = r.width; this.Hpx = r.height;
+    if (this.mode === 'gl') { this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dprCap)); this.r.setSize(r.width, r.height, false); this.cam.aspect = r.width / r.height; this.cam.updateProjectionMatrix(); }
+    this.render();
+  },
+  msg(t, ms) { const m = $('#byMsg'); m.textContent = t; m.hidden = false; clearTimeout(this._mt); if (ms) this._mt = setTimeout(() => { m.hidden = true; }, ms); },
+  /* スマホの傾きで見る（iOS は許可を取ってから） */
+  async setTilt(on) {
+    const btn = $('#byTilt'), out = $('#byTiltMsg');
+    if (!on) { if (this.tilt) window.removeEventListener('deviceorientation', this.tilt.fn); this.tilt = null; btn.setAttribute('aria-pressed', 'false'); out.textContent = ''; return; }
+    if (typeof DeviceOrientationEvent === 'undefined') { out.textContent = 'この端末では傾きを使えません。ドラッグで回りこんでください。'; return; }
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const res = await DeviceOrientationEvent.requestPermission();
+        if (res !== 'granted') { out.textContent = '傾きの利用が許可されませんでした。ドラッグで回りこめます。'; return; }
+      }
+    } catch (e) { out.textContent = '傾きの利用を確認できませんでした。ドラッグで回りこめます。'; return; }
+    const t = this.tilt = { base: null, got: false };
+    t.fn = e => {
+      if (e.beta == null || e.gamma == null) return;
+      t.got = true;
+      if (!t.base) t.base = { b: e.beta, g: e.gamma, yaw: this.st.yaw, pitch: this.st.pitch };
+      this.goal = null;
+      this.st.yaw = t.base.yaw + clamp((e.gamma - t.base.g) / 40, -1, 1) * 0.75;
+      this.st.pitch = clamp(t.base.pitch + clamp((e.beta - t.base.b) / 40, -1, 1) * 0.3, -0.15, 0.6);
+      this.render();
+    };
+    window.addEventListener('deviceorientation', t.fn);
+    btn.setAttribute('aria-pressed', 'true'); out.textContent = '端末を左右・前後に傾けると、屏風の前を回りこめます。もう一度押すと止まります。';
+    setTimeout(() => { if (this.tilt === t && !t.got) { this.setTilt(false); out.textContent = 'この端末では傾きを読み取れませんでした。ドラッグで回りこんでください。'; } }, 2000);
+  },
+};
+(function bindByobu() {
+  const stage = $('#byobuStage'), pts = new Map(); let pinch0 = 0, dist0 = 0;
+  stage.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; try { stage.setPointerCapture(e.pointerId); } catch (_) {} pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); dist0 = Byobu.st.dist; } });
+  stage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    Byobu.goal = null;
+    if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0 > 0) Byobu.st.dist = clamp(dist0 * pinch0 / d, 1, 30); }
+    else { Byobu.st.yaw = clamp(Byobu.st.yaw - (e.clientX - prev[0]) * 0.006, -1.3, 1.3); Byobu.st.pitch = clamp(Byobu.st.pitch + (e.clientY - prev[1]) * 0.004, -0.15, 0.6); }
+    Byobu.render();
+  });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0; };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', e => { e.preventDefault(); Byobu.goal = null; Byobu.st.dist = clamp(Byobu.st.dist * (1 + e.deltaY * 0.0012), 1, 30); Byobu.render(); }, { passive: false });
+  $('#byViews').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) Byobu.setView(b.dataset.v); });
+  $('#byFold').addEventListener('input', e => Byobu.setFold(+e.target.value));
+  $('#bySrc').addEventListener('click', () => Byobu.setSrc(Byobu.src === 'real' ? 'ink' : 'real'));
+  $('#byTilt').addEventListener('click', () => Byobu.setTilt(!Byobu.tilt));
+})();
+Screens.byobu = {
+  title: '屏風モード',
+  async enter() {
+    $('#byCredit').innerHTML = BY_CREDIT[Byobu.src];
+    requestAnimationFrame(async () => {
+      Byobu.Wpx = $('#byobuStage').clientWidth; Byobu.Hpx = $('#byobuStage').clientHeight;
+      const first = !Byobu.mode;
+      await Byobu.init();
+      Byobu.resize();
+      if (first) Byobu.setView(Byobu.Wpx < Byobu.Hpx ? 'right' : 'front', true);
+      else Byobu.render();
+    });
+  },
+  leave() { Byobu.setTilt(false); Byobu.loop = false; },
+  resize() { Byobu.resize(); if (Byobu.mode && !Byobu.goal) Byobu.setView(Byobu.view, true); },
+};
 
 /* ---------- 教員用 ---------- */
 let tPin = ''; try { tPin = sessionStorage.getItem('kuuhaku.pin') || ''; } catch (e) {}
 function studentLink() { const u = new URL(location.href); u.hash = ''; u.search = ''; if (Share.cls) u.searchParams.set('class', Share.cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString(); }
-const SCENES = [['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['real', '実物を見る'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
+const SCENES = [['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['real', '実物を見る'], ['byobu', '屏風モード'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
 function renderLinks() { $('#tLinks').innerHTML = SCENES.map(([h, n]) => `<li><span>${n}</span><button class="btn" data-link="${esc(studentLink())}#/${h}">コピー</button></li>`).join(''); }
 $('#tLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { prompt('このリンクをコピーしてください', b.dataset.link); } setTimeout(() => { b.textContent = 'コピー'; }, 1500); });
 function tRefreshCfg() { renderLinks(); $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
