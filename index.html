@@ -232,7 +232,7 @@ body.hideui .coach,body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.
 /* =====================================================================
    v2：霧の中のアプリ。紙の地・静かな墨・一画面で操作が完結する配置
    ===================================================================== */
-:root{--bar:52px;--foot:58px;--r:16px;--shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);--ease:cubic-bezier(.2,.7,.2,1)}
+:root{--mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif CJK JP","Noto Serif JP","BIZ UDPMincho","IPAMincho","Noto Serif",var(--font);--bar:52px;--foot:58px;--r:16px;--shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);--ease:cubic-bezier(.2,.7,.2,1)}
 html{scroll-behavior:smooth}
 body{background-color:var(--paper);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");font-feature-settings:"palt";letter-spacing:.02em}
 body[data-flow]{padding-bottom:calc(var(--foot) + env(safe-area-inset-bottom))}
@@ -315,7 +315,8 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;background:var(--ink)
 #s-home>.card,#s-home>.more,#s-home>.trail{margin-left:auto;margin-right:auto;width:calc(100% - 32px);max-width:728px}
 .hero{height:min(78dvh,640px);min-height:420px;max-height:none;border:none;border-radius:0;margin:0}
 .hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:38%;background:linear-gradient(180deg,rgba(247,246,242,0),var(--paper));pointer-events:none}
-.hero .ttl{right:max(22px,6vw);top:calc(var(--bar) + 14px);font-size:clamp(2.2rem,9vw,3.6rem);letter-spacing:.32em;line-height:1.2;font-weight:700;text-shadow:0 0 18px var(--paper),0 0 6px var(--paper)}
+.hero .ttl span{display:block}
+.hero .ttl{writing-mode:horizontal-tb;text-align:center;letter-spacing:0;font-family:var(--mincho);font-weight:600;right:max(22px,6vw);top:calc(var(--bar) + 14px);font-size:clamp(2.2rem,9vw,3.6rem);letter-spacing:.32em;line-height:1.2;font-weight:700;text-shadow:0 0 18px var(--paper),0 0 6px var(--paper)}
 .hero-in{position:absolute;left:max(20px,6vw);bottom:34px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:12px;max-width:70%}
 .hero-in .eyebrow{margin:0;font-size:.82rem;letter-spacing:.14em;color:var(--sumi);line-height:1.7}
 .hero-in h1{margin:0;font-size:clamp(1.5rem,6vw,2.2rem);letter-spacing:.14em}
@@ -401,7 +402,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
 <!-- ============ ホーム ============ -->
 <section id="s-home" class="screen">
   <div class="hero"><canvas id="heroCv" aria-hidden="true"></canvas>
-    <div class="ttl" aria-hidden="true">空白の意味</div>
+    <div class="ttl" aria-hidden="true"><span>空</span><span>白</span><span>の</span><span>意</span><span>味</span></div>
     <div class="hero-in">
       <p class="eyebrow">原研哉『空白の意味』を<br>長谷川等伯「松林図屏風」で体感する</p>
       <h1>松林図をあるく</h1>
@@ -732,6 +733,7 @@ function newCanvas(w, h) { const c = document.createElement('canvas'); c.width =
 const INK = '24,24,24';
 const ink = a => `rgba(${INK},${a.toFixed(3)})`;
 const FONT = getComputedStyle(document.documentElement).getPropertyValue('--font');
+const MINCHO = getComputedStyle(document.documentElement).getPropertyValue('--mincho');
 
 /* ---------- 端末内の保存 ---------- */
 const Store = {
@@ -809,6 +811,7 @@ const Ink = {
     for (let b = 0; b < B; b++) {
       const off = (b / (B - 1) - 0.5) + (r() - 0.5) * 0.08;
       const inkA = o.a * (0.55 + 0.45 * r());
+      const t0 = (o.fadeIn || 0) * r();
       /* 穂ごとに「墨が切れはじめる位置」を決める。外側の穂ほど早くかすれる */
       const cut = 1 - dry * (0.25 + 0.75 * r()) * (0.55 + Math.abs(off) * 1.1);
       g.strokeStyle = ink(inkA);
@@ -819,8 +822,9 @@ const Ink = {
         const w = lerp(o.w0, o.w1, t) * (0.55 + 0.45 * smooth(0, 0.12, t));
         const ww = w * (1 + sp * t);
         const x = P[i][0] + nx[i] * off * ww, y = P[i][1] + ny[i] * off * ww;
+        if (t < t0) continue;
         if (pen) { if (q < dd * 0.3) pen = false; else g.lineTo(x, y); }
-        else if (i === 0 || q > 0.45 + dd * 0.5) { g.moveTo(x, y); pen = true; }
+        else if (i === 0 || t0 > 0 || q > 0.45 + dd * 0.5) { g.moveTo(x, y); pen = true; }
       }
       g.stroke();
     }
@@ -901,7 +905,15 @@ function drawPine(g, P, d, S, ox, oy, opt = {}) {
       g.beginPath(); g.ellipse(p[0] + o * w * 0.5, p[1], w * (0.16 + s * 0.14), w * 0.1, 0, 0, Math.PI); g.stroke();
     }
   }
-  if (d > 0.03) Ink.stroke(g, tp, { w0: P.tw * S * lerp(0.9, 1.6, d), w1: P.tw * S * 0.4, a: 0.9 * Math.pow(d, 0.75), dry: 0.2 + 0.55 * d, seed: P.seed ^ 0x77 });
+  if (d > 0.03) Ink.stroke(g, tp, { w0: P.tw * S * lerp(0.85, 1.25, d), w1: P.tw * S * 0.36, a: 0.9 * Math.pow(d, 0.75), dry: 0.3 + 0.55 * d, fadeIn: 0.2 * d, seed: P.seed ^ 0x77 });
+  /* 根：数本の線だけで、立つ場所を示す */
+  const rr = rng(P.seed ^ 0x1007), b0 = tp[0];
+  for (let k = 0; k < 3; k++) {
+    const dir = k % 2 ? 1 : -1, len = P.tw * S * (0.9 + rr() * 2.2), hook = P.tw * S * (0.1 + rr() * 0.35), up = P.tw * S * (0.05 + rr() * 0.3);
+    const pts = spline([[b0[0] + dir * P.tw * S * 0.25, b0[1] - up], [b0[0] + dir * len * 0.55, b0[1] - up * 0.4], [b0[0] + dir * len, b0[1] + hook]], 4);
+    if (prec > 0.03) Ink.line(g, pts, Math.max(0.6, S * 0.0016), 0.6 * prec);
+    if (d > 0.3 && k < 2) Ink.stroke(g, pts, { w0: P.tw * S * 0.3, w1: P.tw * S * 0.08, a: 0.5 * smooth(0.3, 0.9, d), dry: 0.7, seed: P.seed + k * 7 });
+  }
   /* 枝 */
   for (const b of P.branches) {
     const bp = b.pts.map(X);
@@ -950,12 +962,55 @@ function drawCluster(g, c, d, S, ox, oy) {
    スプライト（あらかじめ描いておく松・霊峰・霧）
    ========================================================= */
 const PINES = Array.from({ length: 8 }, (_, i) => makePine(2027 + i * 7919));
+/* 紙（和紙の地・繊維・むら・継ぎ目）と、墨が紙の目でかすれる粒 */
+const Tex = {
+  _grain: null, _paper: new Map(),
+  grain() {
+    if (this._grain) return this._grain;
+    const n = 160, c = newCanvas(n, n), g = c.getContext('2d'), im = g.createImageData(n, n), r = rng(404);
+    for (let i = 0; i < n * n; i++) { const v = r(), w = r(); im.data[i * 4 + 3] = v > 0.55 ? (v - 0.55) * 2.2 * 95 * (0.5 + w) : 0; }
+    g.putImageData(im, 0, 0);
+    g.strokeStyle = 'rgba(0,0,0,.42)'; g.lineWidth = 0.7;
+    for (let i = 0; i < 46; i++) { const x = r() * n, y = r() * n, a = r() * 6.3, l = 6 + r() * 22; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * l * 0.5 + (r() - 0.5) * 6, y + Math.sin(a) * l * 0.5 + (r() - 0.5) * 6, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+    return (this._grain = c);
+  },
+  paper(W, H) {
+    const k = Math.min(1, 900 / Math.max(W, H)), w = Math.max(2, Math.round(W * k)), h = Math.max(2, Math.round(H * k)), key = w + 'x' + h;
+    if (this._paper.has(key)) return this._paper.get(key);
+    if (this._paper.size > 6) this._paper.clear();
+    const c = newCanvas(w, h), g = c.getContext('2d'), r = rng(w * 31 + h);
+    g.fillStyle = '#f6f3ea'; g.fillRect(0, 0, w, h);
+    /* むら */
+    for (let i = 0; i < 70; i++) { const x = r() * w, y = r() * h, rad = (0.08 + r() * 0.25) * Math.max(w, h), dark = r() < 0.55; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, dark ? 'rgba(150,135,105,.05)' : 'rgba(255,255,252,.09)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+    /* 繊維 */
+    g.lineCap = 'round';
+    for (let i = 0; i < Math.round(w * h / 900); i++) { const x = r() * w, y = r() * h, a = r() * 6.3, l = 4 + r() * 20; g.strokeStyle = r() < 0.6 ? `rgba(120,105,80,${0.03 + r() * 0.06})` : `rgba(255,255,255,${0.2 + r() * 0.3})`; g.lineWidth = 0.4 + r() * 0.7; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * l * 0.5 + (r() - 0.5) * 8, y + Math.sin(a) * l * 0.5 + (r() - 0.5) * 8, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+    /* 紙の継ぎ目（うっすら） */
+    g.fillStyle = 'rgba(120,105,80,.045)'; for (const f of [0.34, 0.68]) g.fillRect(0, Math.round(h * (f + (r() - 0.5) * 0.04)), w, 1);
+    /* 周りをわずかに沈める */
+    const vg = g.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.35, w / 2, h / 2, Math.hypot(w, h) * 0.62); vg.addColorStop(0, 'rgba(120,105,80,0)'); vg.addColorStop(1, 'rgba(120,105,80,.11)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
+    this._paper.set(key, c); return c;
+  },
+};
+/* 描いた墨に、紙の目のかすれと、にじみを与える */
+function finishInk(c, bleed) {
+  const g = c.getContext('2d');
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = 'destination-out'; g.fillStyle = g.createPattern(Tex.grain(), 'repeat'); g.fillRect(0, 0, c.width, c.height);
+  if (bleed > 0.01) {
+    const sm = newCanvas(Math.max(4, c.width / 7), Math.max(4, c.height / 7)); sm.getContext('2d').drawImage(c, 0, 0, sm.width, sm.height);
+    g.globalCompositeOperation = 'destination-over'; g.globalAlpha = Math.min(1, bleed); g.imageSmoothingQuality = 'high'; g.drawImage(sm, 0, 0, c.width, c.height);
+    if (bleed > 0.3) { g.globalAlpha = Math.min(1, bleed * 0.6); g.drawImage(sm, -2, 1, c.width + 4, c.height + 2); }
+  }
+  g.restore();
+}
 function makeSprite(pine, d, H) {
   const S = H;
   const pad = 0.05, w = (pine.maxX - pine.minX + pad * 2) * S, h = (-pine.top + 0.08) * S;
   const c = newCanvas(w, h), g = c.getContext('2d');
   const ox = (-pine.minX + pad) * S, oy = h - 0.03 * S;
   drawPine(g, pine, d, S, ox, oy, { ground: true });
+  finishInk(c, 0.15 + 0.5 * d);
   const s = newCanvas(Math.max(8, w / 6), Math.max(8, h / 6));
   s.getContext('2d').drawImage(c, 0, 0, s.width, s.height);
   return { c, s, w: c.width, h: c.height, ax: ox / c.width, ay: oy / c.height, S };
@@ -966,7 +1021,7 @@ const Sprites = {
     if (this.rough.length) return;
     const n = [5, 6, 8][Q.level];
     for (let i = 0; i < n; i++) this.rough.push(makeSprite(PINES[i], 0.93, Q.spriteH));
-    this.peak = makePeak(); this.mist = makeMist();
+    this.peak = makePeak(); this.mist = makeMist(); this.blob = makeBlob();
   },
   ensureFine() {
     if (this.fine.length || this.fineReq) return;
@@ -981,9 +1036,16 @@ function makePeak() {
   const pts = []; for (let i = 0; i <= 40; i++) { const t = i / 40; const x = t * w; const base = h * 0.95 - Math.pow(1 - Math.abs(t - 0.46) / 0.54, 1.6) * h * 0.82; pts.push([x, base + (r() - 0.5) * 4]); }
   /* 白の中の白：稜線の外側に淡い墨をはき、峰そのものは白く残す */
   g.save(); g.beginPath(); g.moveTo(0, 0); pts.forEach(p => g.lineTo(p[0], p[1])); g.lineTo(w, 0); g.closePath(); g.clip();
-  for (let i = 0; i < 14; i++) { const p = pts[4 + Math.floor(r() * 32)]; Ink.wash(g, p[0], p[1] - 6, 36 + r() * 30, 14 + r() * 8, 0.1); }
+  for (let i = 0; i < 26; i++) { const p = pts[5 + Math.floor(r() * 30)]; Ink.wash(g, p[0] + (r() - 0.5) * 20, p[1] - 4 - r() * 8, 46 + r() * 40, 9 + r() * 7, 0.045); }
   g.restore();
-  Ink.line(g, pts.slice(6, 36), 0.9, 0.22);
+  Ink.line(g, pts.slice(7, 35), 0.8, 0.16);
+  return c;
+}
+function makeBlob() {
+  const c = newCanvas(128, 64), g = c.getContext('2d');
+  g.translate(64, 32); g.scale(1, 0.5);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, 64); gr.addColorStop(0, 'rgba(247,244,236,.95)'); gr.addColorStop(0.45, 'rgba(247,244,236,.6)'); gr.addColorStop(1, 'rgba(247,244,236,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 64, 0, 7); g.fill();
   return c;
 }
 function makeMist() {
@@ -992,7 +1054,7 @@ function makeMist() {
     const x = r() * w, y = h * (0.3 + r() * 0.45), rx = 30 + r() * 70, ry = 10 + r() * 20;
     for (const dx of [-w, 0, w]) { /* 横につなげられるように */
       g.save(); g.translate(x + dx, y); g.scale(1, ry / rx);
-      const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, 'rgba(255,255,253,0.55)'); gr.addColorStop(1, 'rgba(255,255,253,0)');
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, 'rgba(249,247,240,0.6)'); gr.addColorStop(1, 'rgba(249,247,240,0)');
       g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fill(); g.restore();
     }
   }
@@ -1081,7 +1143,7 @@ class Forest {
     this.f = Math.min(this.H * 0.95, this.W * 1.5);
     this.hz = this.H * 0.5; this.eye = 0.5;
     this.X = (this.W / 2) / (this.f / (this.far * 0.55)) * 1.15;
-    this.scenery = null;
+    this.scenery = null; this.paper = Tex.paper(this.W, this.H);
     return true;
   }
   spawnX() { let x = (this.rand() * 2 - 1) * this.X; if (Math.abs(x) < 0.22) x += Math.sign(x || 1) * 0.22; return x; }
@@ -1127,7 +1189,7 @@ class Forest {
   draw() {
     const g = this.g, W = this.W, H = this.H, dpr = this.dpr, mist = this.mist;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.fillStyle = '#f7f6f2'; g.fillRect(0, 0, W, H);
+    g.globalAlpha = 1; g.drawImage(this.paper || (this.paper = Tex.paper(W, H)), 0, 0, W, H);
     /* 靄 0 に近いほど「説明しすぎの絵」が現れる */
     const sceneA = 1 - smooth(0.02, 0.5, mist);
     const peakR = Peak.rect(W, H);
@@ -1155,7 +1217,7 @@ class Forest {
         continue;
       }
       const p = it.p;
-      let a = Math.min(1, 1.18 * Math.exp(-k * Math.max(0, dz - 0.9))) * smooth(0.32, 1.05, dz) * smooth(this.far + 0.4, this.far - 1.2, dz);
+      let a = Math.min(0.94, 1.1 * Math.exp(-k * Math.max(0, dz - 0.9))) * smooth(0.32, 1.05, dz) * smooth(this.far + 0.4, this.far - 1.2, dz);
       if (a < 0.012) continue;
       const sx = W / 2 + (p.x - (this.camX || 0)) * s, sy = this.hz + this.eye * s;
       const sp = Sprites.rough[p.v % Sprites.rough.length], hpx = p.hs * s, sc = hpx / sp.S, dw = sp.w * sc, dh = sp.h * sc;
@@ -1168,32 +1230,51 @@ class Forest {
       if (fine) { put(fine.c, a * fineMix); a *= (1 - fineMix); }
       put(sp.s, a * soft); put(sp.c, a * (1 - soft));
       if (p.flip) g.restore();
+      /* 足もとに霧がたまり、幹が白に溶ける */
+      if (mist > 0.08) { const bw = hpx * 1.25, bh = hpx * 0.34; g.globalAlpha = Math.min(1, mist * 1.05) * smooth(0.3, 1.2, dz); g.drawImage(Sprites.blob, sx - bw / 2, sy - bh * 0.72, bw, bh); }
     }
     /* 地平の霧 */
     if (mist > 0.05) {
       const gr = g.createLinearGradient(0, this.hz - H * 0.25, 0, this.hz + H * 0.2);
-      gr.addColorStop(0, 'rgba(247,246,242,0)'); gr.addColorStop(0.55, `rgba(247,246,242,${(mist * 0.55).toFixed(3)})`); gr.addColorStop(1, 'rgba(247,246,242,0)');
+      gr.addColorStop(0, 'rgba(247,244,236,0)'); gr.addColorStop(0.55, `rgba(247,244,236,${(mist * 0.5).toFixed(3)})`); gr.addColorStop(1, 'rgba(247,244,236,0)');
       g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(0, this.hz - H * 0.25, W, H * 0.45);
     }
     g.globalAlpha = 1;
     if (this.words && this.words.length) this.drawWords();
   }
+  wordSprite(w, size) {
+    if (w.spr && w.sprSize === size) return w.spr;
+    const ch = Array.from(w.text), maxRows = clamp(Math.floor(this.H * 0.46 / (size * 1.12)), 5, 12), cols = Math.ceil(ch.length / maxRows), rows = Math.ceil(ch.length / cols);
+    const cell = size * 1.12, colW = size * 1.45, pad = size * 0.9, k = 2;
+    const c = newCanvas((cols * colW + pad * 2) * k, (Math.min(rows, ch.length) * cell + pad * 2) * k), g = c.getContext('2d');
+    g.scale(k, k); g.font = `500 ${size}px ${MINCHO}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = 'rgba(26,26,26,.92)';
+    ch.forEach((t, i) => {
+      const col = Math.floor(i / rows), row = i % rows, x = pad + (cols - 1 - col) * colW + colW / 2, y = pad + row * cell + cell / 2;
+      g.save(); g.translate(x, y);
+      if (/[ー〜～…‥―—\-–()（）「」『』【】〈〉《》\[\]<>＜＞=＝:：;；]/.test(t)) g.rotate(Math.PI / 2);
+      else if (/[、。，．]/.test(t)) g.translate(size * 0.55, -size * 0.5);
+      else if (/[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ]/.test(t)) g.translate(size * 0.1, -size * 0.1);
+      g.fillText(t, 0, 0); g.restore();
+    });
+    finishInk(c, 0.55);
+    w.spr = { c, w: c.width / k, h: c.height / k }; w.sprSize = size;
+    return w.spr;
+  }
   drawWords() {
     const g = this.g, W = this.W, H = this.H, list = this.words, N = list.length;
     const M = this.wordOpt.max, life = 12, L = Math.max(life, N * life / M);
     const size = this.wordOpt.size;
-    g.font = `${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
     for (let i = 0; i < N; i++) {
       const w = list[i];
       const start = w.start != null ? w.start : i * L / N;
       let ph = ((this.time - start) % L + L) % L;
       if (w.start != null && this.time - w.start < life) ph = this.time - w.start;
       if (ph > life) continue;
-      const a = Math.sin(Math.PI * ph / life); if (a < 0.02) continue;
-      const tw = g.measureText(w.text).width;
-      const x = clamp(w.x * W, tw / 2 + 6, W - tw / 2 - 6), y = clamp(w.y * H - ph * 1.2, size, H - size);
-      g.globalAlpha = a * 0.9; g.lineWidth = size * 0.32; g.strokeStyle = 'rgba(247,246,242,0.9)'; g.strokeText(w.text, x, y);
-      g.fillStyle = 'rgba(40,40,40,0.82)'; g.fillText(w.text, x, y);
+      /* すっと現れ、ゆっくり霧に消える */
+      const a = smooth(0, 1.6, ph) * (1 - smooth(life - 4.5, life, ph)); if (a < 0.02) continue;
+      const sp = this.wordSprite(w, size);
+      const x = clamp(w.x * W - sp.w / 2, 2, Math.max(2, W - sp.w - 2)), y = clamp(w.y * H - sp.h * 0.3 - ph * 0.8, 2, Math.max(2, H - sp.h - 2));
+      g.globalAlpha = a * 0.92; g.drawImage(sp.c, x, y, sp.w, sp.h);
     }
     g.globalAlpha = 1;
   }
@@ -1654,11 +1735,15 @@ function drawBrush() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.fillStyle = '#fffefb'; g.fillRect(0, 0, r.width, r.height);
+  g.drawImage(Tex.paper(r.width, r.height), 0, 0, r.width, r.height);
   const d = +$('#brushRange').value / 100, P = brushPine;
-  const S = Math.min((r.height - 40) / (-P.top + 0.06), (r.width - 20) / (P.maxX - P.minX + 0.06));
-  const ox = r.width / 2 - (P.minX + P.maxX) / 2 * S, oy = r.height - 14;
-  drawPine(g, P, d, S, ox, oy, { ground: true });
+  const S = Math.min((r.height - 46) / (-P.top + 0.06), (r.width - 24) / (P.maxX - P.minX + 0.06));
+  const ox = r.width / 2 - (P.minX + P.maxX) / 2 * S, oy = r.height - 20;
+  if (!drawBrush.tmp || drawBrush.tmp.width !== cv.width || drawBrush.tmp.height !== cv.height) drawBrush.tmp = newCanvas(cv.width, cv.height);
+  const tg = drawBrush.tmp.getContext('2d'); tg.setTransform(1, 0, 0, 1, 0, 0); tg.clearRect(0, 0, cv.width, cv.height); tg.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawPine(tg, P, d, S, ox, oy, { ground: true });
+  finishInk(drawBrush.tmp, 0.1 + 0.5 * d);
+  g.drawImage(drawBrush.tmp, 0, 0, r.width, r.height);
   $('#brushOut').textContent = Math.round(d * 100);
   $('#brushCap').textContent = d < 0.3 ? '北宋画のように：針葉を一本ずつ描き込む' : d < 0.68 ? '南宋画のように：「精緻」と「朦朧」が交錯する' : '等伯・破墨のように：荒くすばやい筆の打ち込み';
 }
