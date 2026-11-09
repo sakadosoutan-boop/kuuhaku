@@ -1,0 +1,1504 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>松林図をあるく</title>
+<meta name="description" content="原研哉『空白の意味』の授業で使う、長谷川等伯「松林図屏風」を体感するデジタル教材。霧の松林をあるき、描き込みと靄を変え、白の向こうに言葉を書く。">
+<meta name="theme-color" content="#f7f6f2">
+<style>
+:root{
+  --paper:#f7f6f2; --paper2:#efede7; --white:#fffefb;
+  --ink:#1c1c1c; --sumi:#4a4a4a; --usuzumi:#8a8a8a; --line:#d9d6ce;
+  --fs:16px;
+  --font:"BIZ UDPGothic","BIZ UDGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP","Yu Gothic UI","Yu Gothic","Meiryo","IPAGothic",sans-serif;
+}
+*{box-sizing:border-box}
+html{font-size:var(--fs);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.75;min-height:100vh}
+body.lesson{--fs:20px}
+@media (min-width:1000px){body.lesson{--fs:23px}}
+a{color:inherit}
+h1,h2,h3{line-height:1.4;font-weight:700}
+h2{font-size:1.3rem;margin:.4rem 0 .6rem}
+h3{font-size:1.02rem;margin:1.1rem 0 .4rem}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #6b6b6b;outline-offset:2px}
+
+/* ---- top bar ---- */
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:6px 12px;padding-top:max(6px,env(safe-area-inset-top));background:rgba(247,246,242,.94);border-bottom:1px solid var(--line)}
+.topbar .home{font-weight:700;text-decoration:none;white-space:nowrap;min-height:40px;display:flex;align-items:center}
+.topbar .title{flex:1;min-width:0;font-size:.9rem;color:var(--sumi);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body[data-screen=proj] .topbar{display:none}
+
+/* ---- common ---- */
+.screen{display:none;max-width:1180px;margin:0 auto;padding:12px 16px 48px}
+.screen.on{display:block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 16px;border:1px solid var(--ink);background:var(--white);border-radius:10px;cursor:pointer;touch-action:manipulation;text-decoration:none;line-height:1.35;text-align:center}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.warn{border-color:#7a2b22;color:#7a2b22}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.block{display:flex;width:100%}
+.chip{min-height:36px;padding:4px 12px;border:1px solid rgba(0,0,0,.35);background:rgba(255,255,255,.82);border-radius:999px;cursor:pointer;font-size:.85rem;text-decoration:none;display:inline-flex;align-items:center;touch-action:manipulation}
+.chip[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.msg{min-height:1.5em;margin:.3rem 0;font-size:.92rem}
+.msg.err{color:#7a2b22}
+.note{font-size:.88rem;color:var(--sumi)}
+.passage{background:var(--white);border-left:4px solid var(--ink);padding:8px 12px;margin:6px 0 4px;font-size:.92rem}
+.passage .ref{display:inline-block;font-size:.78rem;font-weight:700;background:var(--ink);color:#fff;padding:0 8px;border-radius:4px;margin-right:6px}
+.passage p{margin:.2rem 0}
+.q{font-weight:700;margin:8px 0 10px;font-size:1.05rem}
+.q::before{content:"問い";display:inline-block;font-size:.75rem;border:1px solid var(--ink);border-radius:4px;padding:0 6px;margin-right:8px;vertical-align:.12em}
+.card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+.share-note{font-size:.82rem;color:var(--sumi)}
+details.think{margin-top:12px;background:var(--white);border:1px dashed var(--usuzumi);border-radius:10px;padding:6px 12px}
+details.think summary{cursor:pointer;font-weight:700;min-height:36px;display:flex;align-items:center}
+
+/* ---- stage ---- */
+.stage{position:relative;width:100%;height:60vh;min-height:300px;max-height:900px;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.stage.short{height:52vh;min-height:280px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hud{position:absolute;top:8px;right:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;z-index:2}
+.walkpad{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:2}
+.pad{width:56px;height:56px;border-radius:50%;border:1px solid rgba(0,0,0,.3);background:rgba(255,255,255,.75);font-size:1rem;cursor:pointer;touch-action:none}
+.pad.small{width:44px;height:44px;margin-left:6px;font-size:.85rem}
+.hint{position:absolute;left:10px;bottom:8px;margin:0;font-size:.78rem;color:rgba(0,0,0,.5);pointer-events:none;z-index:2;max-width:65%}
+.badge{position:absolute;top:8px;left:8px;z-index:2;background:rgba(28,28,28,.82);color:#fff;font-size:.8rem;padding:2px 10px;border-radius:6px}
+.caption{position:absolute;left:10px;top:8px;right:10px;font-size:.85rem;color:var(--sumi);pointer-events:none;z-index:2}
+.tapmark{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border:2px solid rgba(0,0,0,.5);border-radius:50%;pointer-events:none;z-index:3;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.25);opacity:.5}}
+.closed{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:3;background:rgba(28,28,28,.85);color:#fff;padding:4px 14px;border-radius:8px;font-size:.88rem;white-space:nowrap}
+
+.exp{display:block}
+.panel{margin-top:12px}
+@media (min-width:900px) and (orientation:landscape){
+  .exp{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+  .exp .stage{height:calc(100vh - 200px);min-height:380px}
+  .panel{margin-top:0}
+  body.lesson .exp{grid-template-columns:minmax(0,1fr) 400px}
+}
+
+/* ---- sliders ---- */
+.slider-label{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
+.slider-label output{font-size:1.5rem;font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:2px 0;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:6px;background:linear-gradient(90deg,#1c1c1c,#9a9a9a 55%,#fff);border:1px solid #999}
+input[type=range]::-moz-range-track{height:10px;border-radius:6px;background:linear-gradient(90deg,#1c1c1c,#9a9a9a 55%,#fff);border:1px solid #999}
+input[type=range].fine::-webkit-slider-runnable-track{background:repeating-linear-gradient(90deg,#999 0 1px,transparent 1px 6px),linear-gradient(90deg,#fff,#ddd);}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;margin-top:-12px;border-radius:50%;background:var(--white);border:3px solid var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--white);border:3px solid var(--ink)}
+.ticks{display:flex;justify-content:space-between;font-size:.76rem;color:var(--sumi);line-height:1.35;margin-bottom:6px}
+.ticks span{text-align:center;flex:1}
+.ticks span:first-child{text-align:left}.ticks span:last-child{text-align:right}
+
+/* ---- histogram ---- */
+.hist{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;align-items:end;height:110px;border-bottom:1px solid var(--ink);padding-top:16px;position:relative}
+.hist .bar{position:relative;height:100%;display:flex;align-items:flex-end}
+.hist .bar i{display:block;width:100%;background:var(--sumi);border-radius:3px 3px 0 0;min-height:1px;transition:height .4s}
+.hist .bar.mine i{background:var(--ink);outline:2px solid var(--ink);outline-offset:1px}
+.hist .bar b{position:absolute;left:0;right:0;text-align:center;font-size:.72rem;font-weight:400;color:var(--sumi);bottom:calc(var(--h) + 2px)}
+.hist-labels{display:flex;justify-content:space-between;font-size:.74rem;color:var(--sumi)}
+.hist.big{height:200px}
+
+/* ---- home ---- */
+.hero{position:relative;height:34vh;min-height:200px;max-height:380px;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin-top:4px}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero .ttl{position:absolute;right:16px;top:12px;writing-mode:vertical-rl;font-size:1.5rem;font-weight:700;letter-spacing:.15em;color:var(--ink);text-shadow:0 0 6px var(--paper),0 0 12px var(--paper)}
+.hero .sub{position:absolute;left:12px;bottom:8px;font-size:.8rem;color:var(--sumi);text-shadow:0 0 6px var(--paper)}
+.menu{list-style:none;padding:0;margin:8px 0;display:grid;gap:8px}
+@media (min-width:760px){.menu{grid-template-columns:1fr 1fr}}
+.menu a{display:grid;grid-template-columns:44px 1fr;gap:4px 10px;align-items:center;padding:10px 12px;background:var(--white);border:1px solid var(--line);border-radius:12px;text-decoration:none;min-height:64px}
+.menu a .n{grid-row:span 2;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700}
+.menu a b{font-size:1rem}
+.menu a small{color:var(--sumi);font-size:.8rem;line-height:1.4}
+.menu a.later{opacity:.55}
+.field{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.field input{min-height:44px;padding:6px 10px;border:1px solid var(--usuzumi);border-radius:8px;background:#fff;width:9em;text-transform:uppercase}
+.mode-pill{display:inline-block;font-size:.8rem;padding:0 8px;border-radius:999px;border:1px solid var(--ink)}
+.mode-pill.gas{background:var(--ink);color:#fff}
+
+/* ---- check ---- */
+.qs{list-style:none;padding:0;margin:0;counter-reset:q}
+.qs li{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;counter-increment:q}
+.qs li p{margin:0 0 6px;font-weight:700}
+.qs li p::before{content:counter(q) "．"}
+.opts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.opts button{min-height:48px;border:1px solid var(--usuzumi);border-radius:8px;background:#fff;cursor:pointer;font-size:.78rem;line-height:1.25;padding:4px 2px;touch-action:manipulation}
+.opts button b{display:block;font-size:1.05rem}
+.opts button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.kake{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:stretch;margin:12px 0}
+.jiku{position:relative;width:118px;padding:14px 0}
+.jiku::before,.jiku::after{content:"";position:absolute;left:-10px;right:-10px;height:12px;border-radius:6px;background:#3a3a3a}
+.jiku::before{top:0}.jiku::after{bottom:0;left:-16px;right:-16px}
+.jiku .paper{position:relative;height:320px;border:1px solid #bbb;display:flex;flex-direction:column;overflow:visible}
+.jiku .band{flex:var(--f);display:flex;align-items:center;justify-content:center;font-size:.72rem;text-align:center;line-height:1.25;padding:0 4px}
+.jiku .mk{position:absolute;left:-14px;right:-14px;height:0;border-top:2px solid #7a2b22;z-index:2}
+.jiku .mk span{position:absolute;right:-30px;top:-.8em;font-size:.75rem;font-weight:700;color:#7a2b22;background:var(--paper);padding:0 2px}
+.jiku .mk.pre{border-top-style:dashed}
+.kake .desc p{margin:.2rem 0 .7rem}
+.typebox{font-size:1.1rem;font-weight:700}
+
+/* ---- write ---- */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--white);border-top:1px solid var(--ink);padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));box-shadow:0 -6px 18px rgba(0,0,0,.12)}
+.sheet[hidden]{display:none}
+.sheet label{font-weight:700;display:block}
+.sheet .inrow{display:flex;gap:8px;align-items:center}
+.sheet input{flex:1;min-width:0;min-height:48px;padding:6px 10px;border:1px solid var(--ink);border-radius:8px;background:#fff;font-size:1.05rem}
+.count{font-size:.8rem;color:var(--sumi);font-variant-numeric:tabular-nums;white-space:nowrap}
+.myposts{padding-left:1.2em;margin:.3rem 0}
+.myposts li{margin:.2rem 0}
+
+/* ---- proj ---- */
+.screen.proj{max-width:none;padding:0}
+.proj .full{position:fixed;inset:0;background:var(--paper)}
+.proj canvas{position:absolute;inset:0;width:100%;height:100%}
+.projbar{position:fixed;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;padding:8px 12px;z-index:5;flex-wrap:wrap}
+.projbar .info{flex:1 1 220px;font-size:1rem;line-height:1.4;color:var(--sumi);text-shadow:0 0 6px var(--paper)}
+.projhist{position:fixed;right:16px;bottom:16px;z-index:5;width:min(520px,calc(100vw - 32px));background:rgba(255,254,251,.93);border:1px solid var(--line);border-radius:12px;padding:8px 16px 12px}
+.projhist h3{margin:.4rem 0}
+
+/* ---- lab ---- */
+.labdots{display:flex;gap:6px;margin:8px 0}
+.labdots button{flex:1;min-height:40px;border:1px solid var(--ink);background:#fff;border-radius:8px;cursor:pointer;font-size:.8rem;line-height:1.2}
+.labdots button[aria-current=true]{background:var(--ink);color:#fff}
+.labstep{display:none}
+.labstep.on{display:block}
+.labfig{background:var(--white);border:1px solid var(--line);border-radius:12px;display:flex;justify-content:center;align-items:center;padding:8px;min-height:240px;position:relative}
+.labfig svg,.labfig canvas{width:100%;max-width:520px;height:auto;display:block}
+.manga{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;max-width:620px}
+.manga .koma{border:2px solid var(--ink);background:#fff;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+.manga .koma svg{width:100%;height:100%}
+.manga .koma.gap{border-style:dashed;border-color:var(--usuzumi);color:var(--sumi);font-size:.85rem;text-align:center;padding:4px}
+
+/* ---- teacher ---- */
+.tposts{list-style:none;padding:0;margin:0}
+.tposts li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.tposts li span{flex:1;min-width:0;word-break:break-all}
+.tposts li.hid span{color:var(--usuzumi);text-decoration:line-through}
+.tposts li small{color:var(--usuzumi);font-size:.75rem;white-space:nowrap}
+.field input.wide{width:100%;text-transform:none}
+textarea{width:100%;min-height:120px;padding:8px 10px;border:1px solid var(--usuzumi);border-radius:8px;background:#fff;line-height:1.6}
+textarea.out{min-height:220px;font-size:.9rem;background:var(--paper2)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){.tapmark{animation:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="home" href="#/home" aria-label="ホームへ">松林図をあるく</a>
+  <span class="title" id="barTitle"></span>
+  <button class="chip" id="lessonBtn" aria-pressed="false" title="投影向けに文字を大きくする">授業モード</button>
+</header>
+
+<main>
+<!-- ============ ホーム ============ -->
+<section id="s-home" class="screen" data-title="">
+  <div class="hero"><canvas id="heroCv" aria-hidden="true"></canvas>
+    <div class="ttl">空白の意味</div>
+    <div class="sub">原研哉『空白の意味』（教科書 p.145〜151）× 長谷川等伯「松林図屏風」</div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label for="classInput"><b>クラスコード</b></label>
+      <input id="classInput" maxlength="16" autocomplete="off" placeholder="例 2A" aria-describedby="shareStatus">
+      <button class="btn" id="classSave">決定</button>
+    </div>
+    <p class="share-note" id="shareStatus"></p>
+  </div>
+
+  <h2>1時間の流れ</h2>
+  <ol class="menu">
+    <li><a href="#/check/pre"><span class="n">前</span><b>空白うめたい度チェック</b><small>6問・1分。授業のはじめの自分を記録する</small></a></li>
+    <li><a href="#/lab"><span class="n">1</span><b>補完ラボ（5分）</b><small>見えない三角形・半分隠した絵・ぼかし絵・マンガの2コマ</small></a></li>
+    <li><a href="#/brush"><span class="n">2</span><b>描き込みスライダー（10分）</b><small>北宋画の精緻 ⇔ 等伯の荒い筆。いちばん松らしいのは？</small></a></li>
+    <li><a href="#/forest"><span class="n">3</span><b>霧の松林をあるく・靄スライダー（15分）</b><small>霧の奥へ進む。霧を晴らすと何が起こる？</small></a></li>
+    <li><a href="#/write"><span class="n">4</span><b>白の向こうに書く（10分）</b><small>白い霧をタップして、そこにあるものを一行で</small></a></li>
+    <li><a href="#/reflect"><span class="n">5</span><b>振り返り（5分）</b><small>うめたい度（後）・掛け軸の目盛り・記録をコピー</small></a></li>
+    <li><a href="#/byobu" class="later"><span class="n">屏</span><b>屏風モード（準備中）</b><small>六曲一双を折れた画面で見る（第3段階）</small></a></li>
+  </ol>
+
+  <div class="card">
+    <h3 style="margin-top:0">実物と見比べよう</h3>
+    <p class="note">この教材の松・霧・霊峰は、松林図をもとに筆の打ち込みを重ねてプログラムで描いた<strong>独自の水墨風の絵</strong>で、実物の画像ではありません。実物は、教科書 p.146〜147 の図版と、東京国立博物館の公式ページで見比べてください。</p>
+    <ul class="note">
+      <li><a href="https://www.tnm.jp/modules/r_collection/index.php?controller=dtl&amp;colid=A10471" target="_blank" rel="noopener">東京国立博物館「松林図屏風」（名品ギャラリー）</a></li>
+      <li><a href="https://colbase.nich.go.jp/collection_items/tnm/A-10471" target="_blank" rel="noopener">ColBase（国立文化財機構所蔵品統合検索システム）</a></li>
+    </ul>
+  </div>
+  <p class="note">名前やメールアドレスは集めません。書いた言葉と選んだ値は、この端末と（設定されていれば）クラスの共有シートにだけ保存されます。 ／ <a href="#/teacher">教員用</a></p>
+</section>
+
+<!-- ============ うめたい度チェック ============ -->
+<section id="s-check" class="screen">
+  <h2 id="checkTitle">空白うめたい度チェック</h2>
+  <p class="note">いまの自分に、どのくらいあてはまりますか。1〜4 から選んでください。</p>
+  <ol class="qs" id="checkList"></ol>
+  <button class="btn primary block" id="checkDone" disabled>結果を見る</button>
+  <div id="checkResult" hidden>
+    <h3>掛け軸の目盛り</h3>
+    <div class="kake" id="checkKake"></div>
+    <div class="row" id="checkNext"></div>
+  </div>
+</section>
+
+<!-- ============ 補完ラボ ============ -->
+<section id="s-lab" class="screen">
+  <div class="passage"><span class="ref">145・2／145・4</span>
+    <p>（要旨）空白は「無」や「エネルギーの不在」ではなく「機前の可能性」である。空っぽの器を無価値と見ず、何かが入る「予兆」と見立てる創造性。</p></div>
+  <p class="q">描かれていないものが「見える」のは、なぜだろう。</p>
+  <div class="labdots" id="labDots" role="tablist">
+    <button data-i="0">1 三角形</button><button data-i="1">2 隠した絵</button><button data-i="2">3 ぼかし絵</button><button data-i="3">4 2コマ</button>
+  </div>
+
+  <div class="labstep" data-step="0">
+    <div class="labfig"><svg id="kanizsa" viewBox="0 0 320 300" role="img" aria-label="見えない三角形の図"></svg></div>
+    <p><b>白い三角形が見えますか？</b> 三角形の線は、一本も描かれていません。</p>
+    <div class="row"><button class="btn" id="kzLine" aria-pressed="false">線で確かめる</button></div>
+    <p class="note" id="kzNote"></p>
+  </div>
+
+  <div class="labstep" data-step="1">
+    <div class="labfig"><canvas id="hideCv" width="520" height="360" aria-label="真ん中が霧で隠れた松の絵"></canvas></div>
+    <p><b>霧で隠れた部分には、何が描かれているだろう。</b>頭の中で思い浮かべてから、霧を晴らしてみよう。</p>
+    <div class="row"><button class="btn" id="hideBtn" aria-pressed="false">霧を晴らす</button></div>
+    <p class="note" id="hideNote"></p>
+  </div>
+
+  <div class="labstep" data-step="2">
+    <div class="labfig"><canvas id="blurCv" width="480" height="340" aria-label="ぼかした絵"></canvas></div>
+    <p><b>何の絵に見えますか？</b> 答えを決めてから、少しずつはっきりさせよう。</p>
+    <div class="row"><button class="btn" id="blurBtn">少しはっきりさせる</button><span id="blurStep" class="note"></span></div>
+    <p class="note" id="blurNote"></p>
+  </div>
+
+  <div class="labstep" data-step="3">
+    <div class="labfig"><div class="manga" id="manga"></div></div>
+    <p><b>左のコマと右のコマのあいだで、何が起きた？</b> 真ん中は描かれていません。想像してからタップ。</p>
+    <p class="note" id="mangaNote"></p>
+  </div>
+
+  <div class="row"><button class="btn" id="labPrev">← 前へ</button><button class="btn primary" id="labNext">次へ →</button></div>
+  <details class="think"><summary>本文につなげる</summary><p>どの体験でも、見る側は描かれていない部分を自分で補っていた。本文 149・2 では、破墨の荒い筆の松を見るとき、見る側が「未発の景観」を補完すると述べている。</p></details>
+</section>
+
+<!-- ============ 描き込みスライダー ============ -->
+<section id="s-brush" class="screen">
+  <div class="passage"><span class="ref">148・12／149・2</span>
+    <p>（要旨）松林図は荒い筆遣いで描かれる。精緻な描き込みを意図的に回避することで、逆に見る側のイメージを活性化させる。北宋画は精緻、南宋画は「精緻」と「朦朧」の交錯。破墨の荒くすばやい筆法では、見る側が未発の景観を補完する。</p></div>
+  <p class="q">同じ一本の松。どの描き方が、いちばん「松らしい」と感じるだろう。</p>
+  <div class="exp">
+    <div class="stage short" id="brushStage"><canvas id="brushCv" aria-label="描き込みの度合いを変えられる一本の松"></canvas><div class="caption" id="brushCap"></div></div>
+    <div class="panel">
+      <div class="slider-label"><label for="brushRange">描き込み</label><output id="brushOut">60</output></div>
+      <input type="range" id="brushRange" min="0" max="100" step="1" value="60" class="fine" aria-describedby="brushTicks">
+      <div class="ticks" id="brushTicks"><span>0<br>北宋画・精緻</span><span>南宋画<br>精緻と朦朧</span><span>100<br>等伯・破墨</span></div>
+      <button class="btn primary block" id="brushVote">この位置が いちばん松らしい</button>
+      <p class="msg" id="brushMine"></p>
+      <h3>クラスの分布</h3>
+      <div class="hist" id="brushHist"></div>
+      <div class="hist-labels"><span>精緻</span><span>荒い</span></div>
+      <p class="share-note" data-share-note></p>
+      <details class="think"><summary>考えよう</summary><p>針葉を一本ずつ描いた松と、数本の打ち込みだけの松。見る側の頭の中でしている仕事は、どう違うだろう。</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 霧の松林 ============ -->
+<section id="s-forest" class="screen">
+  <div class="passage"><span class="ref">149・7／149・16</span>
+    <p>（要旨）描いているのは松の木より、松の木々の間の空間。白い空間は不在ではなく、その向こうに無数の松を蔵する濃密な奥行き。左隻右上の霊峰は白の中の白、最も遠い遠景。白い空白に感覚をゆだね、たゆたう。</p></div>
+  <p class="q">霧の奥へ進んでみよう。白い空間は「何もない」だろうか。</p>
+  <div class="exp">
+    <div class="stage" id="forestStage">
+      <canvas id="forestCv" aria-label="霧の松林。上へスワイプすると奥へ進む"></canvas>
+      <div class="badge" id="overBadge" hidden>靄 0：すべてを描き込んだ絵</div>
+      <div class="hud">
+        <button class="chip" id="soundBtn" aria-pressed="false">松風 オフ</button>
+        <button class="chip" id="autoBtn" aria-pressed="false">ゆっくり歩く</button>
+      </div>
+      <div class="walkpad">
+        <button class="pad" id="walkF" aria-label="奥へ進む">▲<span class="sr">奥へ</span></button>
+        <button class="pad small" id="walkB" aria-label="もどる">▼</button>
+      </div>
+      <p class="hint">上へスワイプ（またはスクロール）で霧の奥へ</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">靄スライダー</h3>
+      <div class="slider-label"><label for="mistRange">霧の濃さ</label><output id="mistOut">70</output></div>
+      <input type="range" id="mistRange" min="0" max="100" step="1" value="70">
+      <div class="ticks"><span>0<br>すべて見える</span><span>100<br>白い霧</span></div>
+      <button class="btn primary block" id="mistRec">この濃さが いちばん広く深く感じる</button>
+      <p class="msg" id="mistMine"></p>
+      <h3>クラスの分布</h3>
+      <div class="hist" id="mistHist"></div>
+      <div class="hist-labels"><span>0 すべて見える</span><span>100 白い霧</span></div>
+      <p class="share-note" data-share-note></p>
+      <details class="think"><summary>考えよう</summary><p>靄 0 の「説明しすぎの絵」と、霧の濃い絵。広く深く感じるのはどちらか。本文 150・4「空白地帯を情報のゼロ地帯とは見なさない」とつなげて考えよう。左上の霊峰には、どこまで歩けば近づけるだろう。</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 白の向こうに書く ============ -->
+<section id="s-write" class="screen">
+  <div class="passage"><span class="ref">150・1／150・4／150・5</span>
+    <p>（要旨）何もない空白に、細密な描写以上の豊かなイマジネーションを見立てる逆説的な絵画表現。空白地帯を情報のゼロ地帯とは見なさない。そこに意味の比重を加算しようとする心性が、日本の美意識の重要な一端。</p></div>
+  <p class="q">白い霧の向こうに、何があると思う？ 白い部分をタップして、一行で書こう。</p>
+  <div class="stage" id="writeStage">
+    <canvas id="writeCv" aria-label="霧の松林。白い部分をタップすると言葉を書ける"></canvas>
+    <div class="tapmark" id="tapMark" hidden></div>
+    <div class="closed" id="writeClosed" hidden>いまは受付を停止しています</div>
+  </div>
+  <p class="share-note" data-share-note></p>
+  <div class="row"><a class="btn" href="#/proj">投影モードで見る</a></div>
+  <h3>わたしが書いた言葉</h3>
+  <ul class="myposts" id="myPosts"></ul>
+</section>
+<form class="sheet" id="writeForm" hidden>
+  <label for="writeText">ここに何があると思う？（30字以内）</label>
+  <div class="inrow"><input id="writeText" maxlength="30" autocomplete="off" enterkeyhint="send"><span class="count" id="writeCount">0/30</span></div>
+  <div class="row"><button type="submit" class="btn primary">霧の中に置く</button><button type="button" class="btn" id="writeCancel">やめる</button></div>
+  <p class="msg" id="writeMsg" role="status"></p>
+</form>
+
+<!-- ============ 振り返り ============ -->
+<section id="s-reflect" class="screen">
+  <h2>振り返り</h2>
+  <div class="card" id="rfCheck"></div>
+  <h3>掛け軸の目盛り（前と後）</h3>
+  <div class="kake" id="rfKake"></div>
+  <h3>ことばにしよう</h3>
+  <label for="rfText" class="note">今日の体験から、「空白は『無』ではない」と言えるのはなぜか。自分のことばで書こう。</label>
+  <textarea id="rfText" maxlength="400"></textarea>
+  <h3>記録（テキスト）</h3>
+  <textarea class="out" id="rfOut" readonly aria-label="振り返りの記録"></textarea>
+  <div class="row"><button class="btn primary" id="rfCopy">コピーする</button><span class="msg" id="rfMsg" role="status"></span></div>
+  <p class="note">コピーした記録は、Google Classroom の課題やフォームに貼り付けて提出できます。</p>
+</section>
+
+<!-- ============ 投影モード ============ -->
+<section id="s-proj" class="screen proj">
+  <div class="full"><canvas id="projCv" aria-label="投影用の霧の松林と、クラスの言葉"></canvas></div>
+  <div class="projbar">
+    <span class="info" id="projInfo"></span>
+    <button class="chip" id="projHistBtn" aria-pressed="false">分布</button>
+    <button class="chip" id="projWalk" aria-pressed="true">歩く</button>
+    <button class="chip" id="projFull">全画面</button>
+    <a class="chip" href="#/write">とじる</a>
+  </div>
+  <div class="projhist" id="projHistBox" hidden>
+    <h3>いちばん松らしい描き込み</h3>
+    <div class="hist big" id="projBrushHist"></div><div class="hist-labels"><span>精緻</span><span>荒い</span></div>
+    <h3>いちばん広く深く感じた霧</h3>
+    <div class="hist big" id="projMistHist"></div><div class="hist-labels"><span>すべて見える</span><span>白い霧</span></div>
+  </div>
+</section>
+
+<!-- ============ 屏風モード ============ -->
+<section id="s-byobu" class="screen">
+  <h2>屏風モード（準備中）</h2>
+  <p>六曲一双の屏風を 3D で表示し、折れた画面を見る体験は、第3段階で追加します。それまでは、教科書 p.146〜147 の図版を、本を少し折り曲げるようにして眺めてみよう。</p>
+  <a class="btn" href="#/home">ホームへ</a>
+</section>
+
+<!-- ============ 教員用 ============ -->
+<section id="s-teacher" class="screen">
+  <h2>教員用</h2>
+  <div class="card">
+    <h3 style="margin-top:0">共有の設定（この端末）</h3>
+    <p class="share-note" id="tMode"></p>
+    <label for="tGas" class="note">GAS ウェブアプリの URL（<code>https://script.google.com/macros/s/…/exec</code>）。空にすると「端末内のみ」。</label>
+    <div class="field"><input id="tGas" class="wide" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/……/exec"></div>
+    <div class="row"><button class="btn" id="tGasSave">保存</button><button class="btn" id="tPing">接続を確かめる</button></div>
+    <p class="msg" id="tGasMsg" role="status"></p>
+    <label for="tLink" class="note">生徒に配るリンク（クラスコードと共有先が入ります）</label>
+    <div class="field"><input id="tLink" class="wide" readonly></div>
+    <div class="row"><button class="btn" id="tLinkCopy">リンクをコピー</button></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">クラスの管理</h3>
+    <div class="field"><label for="tClass">クラスコード</label><input id="tClass" maxlength="16" autocomplete="off"></div>
+    <div class="field" style="margin-top:8px"><label for="tPin">教員用 PIN</label><input id="tPin" type="password" autocomplete="off" inputmode="numeric" style="text-transform:none"></div>
+    <div class="row"><button class="btn primary" id="tLogin">ひらく</button></div>
+    <p class="msg" id="tMsg" role="status"></p>
+    <div id="tPanel" hidden>
+      <div class="row"><span>受付：<b id="tOpen">—</b></span><button class="btn" id="tOpenBtn">受付を開始</button><button class="btn" id="tCloseBtn">受付を停止</button></div>
+      <div class="row"><a class="btn primary" href="#/proj">投影モードへ</a><button class="btn" id="tReload">一覧を更新</button></div>
+      <h3>投稿（<span id="tCount">0</span>件）</h3>
+      <ul class="tposts" id="tPosts"></ul>
+      <h3>リセット</h3>
+      <div class="row"><button class="btn warn" id="tClear">投稿を全消去</button><button class="btn warn" id="tClearVotes">投票をリセット</button></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+'use strict';
+/* =========================================================
+   設定：教員が GAS ウェブアプリの URL をここに書いてもよい。
+   （書かない場合は、教員用画面か ?gas= 付きリンクで設定する）
+   ========================================================= */
+const CONFIG = {
+  GAS_URL: '',
+  POLL_MS: 8000,          // 共有のポーリング間隔（＋0〜2秒のゆらぎ）
+  MAX_LEN: 30,
+  POST_INTERVAL_SEC: 15,
+  MAX_POSTS: 10,
+};
+
+/* ---------- 小道具 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+function rng(seed) { let s = (seed >>> 0) || 1; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function newCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; }
+const INK = '24,24,24';
+const ink = a => `rgba(${INK},${a.toFixed(3)})`;
+const FONT = getComputedStyle(document.documentElement).getPropertyValue('--font');
+
+/* ---------- 端末内の保存 ---------- */
+const Store = {
+  key: 'kuuhaku.v1', d: {},
+  load() {
+    let d = {};
+    try { d = JSON.parse(localStorage.getItem(this.key) || '{}') || {}; } catch (e) { d = {}; }
+    this.d = Object.assign({ client: '', classCode: '', gasUrl: '', lesson: false, sound: false, pre: null, post: null, mistBest: null, brushVote: null, myPosts: [], reflection: '', lastPostAt: 0 }, d);
+    if (!/^[A-Za-z0-9]{12,32}$/.test(this.d.client)) {
+      const a = new Uint8Array(12); (crypto.getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.random() * 256));
+      this.d.client = Array.from(a, b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('') + 'k';
+      this.save();
+    }
+  },
+  save() { try { localStorage.setItem(this.key, JSON.stringify(this.d)); } catch (e) { /* 保存できなくても動く */ } },
+  set(k, v) { this.d[k] = v; this.save(); },
+};
+Store.load();
+
+/* ---------- 端末の性能に合わせた描画量 ---------- */
+const Q = (() => {
+  const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
+  let level = (mem <= 2 || cores <= 2) ? 0 : (mem <= 4 || cores <= 4) ? 1 : 2;
+  const p = new URLSearchParams(location.search).get('q');
+  if (p !== null && /^[012]$/.test(p)) level = +p;
+  return {
+    level,
+    get pines() { return [14, 22, 30][this.level]; },
+    get dprCap() { return [1, 1.25, 1.6][this.level]; },
+    get spriteH() { return [300, 400, 512][this.level]; },
+    get mistLayers() { return [1, 2, 3][this.level]; },
+  };
+})();
+
+/* =========================================================
+   筆の打ち込み（毛筆を「穂」に分けて描き、かすれを入れる）
+   ========================================================= */
+function spline(c, seg) {
+  const out = [];
+  for (let i = 0; i < c.length - 1; i++) {
+    const p0 = c[Math.max(0, i - 1)], p1 = c[i], p2 = c[i + 1], p3 = c[Math.min(c.length - 1, i + 2)];
+    for (let s = 0; s < seg; s++) {
+      const t = s / seg, t2 = t * t, t3 = t2 * t;
+      out.push([0, 1].map(k => 0.5 * ((2 * p1[k]) + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3)));
+    }
+  }
+  out.push(c[c.length - 1].slice());
+  return out;
+}
+function along(P, u) { const i = clamp(u, 0, 1) * (P.length - 1), a = Math.floor(i), b = Math.min(P.length - 1, a + 1), f = i - a; return [lerp(P[a][0], P[b][0], f), lerp(P[a][1], P[b][1], f)]; }
+function resample(P, step) {
+  const out = [P[0]]; let acc = 0;
+  for (let i = 1; i < P.length; i++) {
+    let [x0, y0] = P[i - 1]; const [x1, y1] = P[i];
+    let seg = Math.hypot(x1 - x0, y1 - y0);
+    while (acc + seg >= step) { const t = (step - acc) / seg; x0 = lerp(x0, x1, t); y0 = lerp(y0, y1, t); out.push([x0, y0]); seg = Math.hypot(x1 - x0, y1 - y0); acc = 0; if (out.length > 400) return out; }
+    acc += seg;
+  }
+  out.push(P[P.length - 1]);
+  return out;
+}
+const Ink = {
+  /* 太さ w0→w1、墨の濃さ a、かすれ dry（0〜1） */
+  stroke(g, pts, o) {
+    const r = rng(o.seed || 7);
+    const wmax = Math.max(o.w0, o.w1);
+    const P = resample(pts, Math.max(1.4, wmax * 0.15)); const N = P.length; if (N < 2) return;
+    const B = clamp(Math.round(wmax / 1.25), 3, 22);
+    const lw = Math.max(0.6, wmax / B * 1.3);
+    const nx = new Float32Array(N), ny = new Float32Array(N);
+    for (let i = 0; i < N; i++) { const a = P[Math.max(0, i - 1)], b = P[Math.min(N - 1, i + 1)]; let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; nx[i] = -dy / l; ny[i] = dx / l; }
+    g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = lw;
+    const dry = o.dry || 0;
+    for (let b = 0; b < B; b++) {
+      const off = (b / (B - 1) - 0.5) + (r() - 0.5) * 0.08;
+      const inkA = o.a * (0.55 + 0.45 * r());
+      /* 穂ごとに「墨が切れはじめる位置」を決める。外側の穂ほど早くかすれる */
+      const cut = 1 - dry * (0.25 + 0.75 * r()) * (0.55 + Math.abs(off) * 1.1);
+      g.strokeStyle = ink(inkA);
+      g.beginPath(); let pen = false;
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1), q = r();
+        const dd = t < cut ? 0 : (t - cut) / Math.max(0.05, 1 - cut);
+        const w = lerp(o.w0, o.w1, t) * (0.55 + 0.45 * smooth(0, 0.12, t));
+        const x = P[i][0] + nx[i] * off * w, y = P[i][1] + ny[i] * off * w;
+        if (pen) { if (q < dd * 0.3) pen = false; else g.lineTo(x, y); }
+        else if (i === 0 || q > 0.45 + dd * 0.5) { g.moveTo(x, y); pen = true; }
+      }
+      g.stroke();
+    }
+  },
+  line(g, pts, lw, a) { g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = ink(a); g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.stroke(); },
+  wash(g, x, y, rx, ry, a) {
+    if (a <= 0.003 || rx < 0.5) return;
+    g.save(); g.translate(x, y); g.scale(1, ry / rx);
+    const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+    gr.addColorStop(0, ink(a)); gr.addColorStop(0.55, ink(a * 0.5)); gr.addColorStop(1, ink(0));
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill(); g.restore();
+  },
+};
+
+/* =========================================================
+   松の構造（種から幹・枝・葉群を作る）
+   ========================================================= */
+function makePine(seed) {
+  const r = rng(seed);
+  const lean = (r() - 0.5) * 0.24, bend = (r() - 0.5) * 0.14, hgt = 0.9 + r() * 0.1, ph = 0.8 + r() * 0.5;
+  const ctrl = [];
+  for (let i = 0; i <= 6; i++) { const t = i / 6; ctrl.push([lean * t * t * 1.2 + bend * Math.sin(Math.PI * t * ph) + (i ? (r() - 0.5) * 0.014 : 0), -t * hgt]); }
+  const trunk = spline(ctrl, 6);
+  const tw = 0.024 + r() * 0.012;
+  const branches = []; const nb = 5 + Math.floor(r() * 4); let side = r() < 0.5 ? -1 : 1;
+  for (let k = 0; k < nb; k++) {
+    const t = Math.min(0.96, 0.4 + 0.55 * (k / (nb - 1)) + (r() - 0.5) * 0.04);
+    if (r() < 0.72) side = -side;
+    const b = along(trunk, t);
+    const len = (0.09 + r() * 0.19) * (1.2 - t * 0.7);
+    const dr = 0.012 + r() * 0.05, up = r() * 0.05;
+    const pts = spline([b, [b[0] + side * len * 0.3, b[1] + dr * 0.7], [b[0] + side * len * 0.66, b[1] + dr], [b[0] + side * len, b[1] + dr * 0.4 - up]], 5);
+    const cl = []; const nc = 2 + Math.floor(r() * 2.4);
+    for (let j = 0; j < nc; j++) {
+      const u = clamp(1 - j * 0.3 - r() * 0.08, 0.25, 1); const p = along(pts, u);
+      const rr = (0.05 + r() * 0.04) * (0.7 + 0.3 * u) * (1.15 - t * 0.3);
+      cl.push({ x: p[0] + (r() - 0.5) * 0.02, y: p[1] - rr * 0.25, rx: rr * 1.5, ry: rr * 0.6, seed: (r() * 1e9) | 0, side });
+    }
+    branches.push({ pts, w: tw * (0.3 + 0.18 * r()) * (1.15 - t * 0.5), cl, seed: (r() * 1e9) | 0 });
+  }
+  const top = trunk[trunk.length - 1];
+  const crown = [{ x: top[0] + (r() - 0.5) * 0.02, y: top[1] + 0.012, rx: 0.065 + r() * 0.03, ry: 0.034 + r() * 0.01, seed: (r() * 1e9) | 0, side: 0 }];
+  let minX = Infinity, maxX = -Infinity;
+  for (const p of trunk) { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); }
+  for (const c of crown.concat(...branches.map(b => b.cl))) { minX = Math.min(minX, c.x - c.rx * 1.35); maxX = Math.max(maxX, c.x + c.rx * 1.35); }
+  for (const b of branches) for (const p of b.pts) { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); }
+  return { trunk, tw, branches, crown, minX, maxX, top: top[1] - 0.06, seed };
+}
+
+/* 描き込み度 d：0＝針葉を一本ずつ（北宋画）… 1＝数本の荒い打ち込み（等伯・破墨） */
+function drawPine(g, P, d, S, ox, oy, opt = {}) {
+  const X = p => [ox + p[0] * S, oy + p[1] * S];
+  const prec = 1 - d;
+  const allC = P.crown.concat(...P.branches.map(b => b.cl));
+  const keep = c => rng(c.seed ^ 0x55aa)() > 0.45 * d * d;
+  if (opt.ground) Ink.wash(g, ox + P.trunk[0][0] * S, oy + S * 0.004, S * 0.13, S * 0.014, 0.07 + 0.07 * d);
+  /* 淡い墨の滲み（朦朧） */
+  const washA = 0.03 + Math.sin(Math.PI * clamp(d * 1.05, 0, 1)) * 0.15 + d * 0.05;
+  for (const c of allC) if (keep(c)) Ink.wash(g, ox + c.x * S, oy + c.y * S, c.rx * S * 1.25, c.ry * S * 1.6, washA);
+  /* 幹 */
+  const tp = P.trunk.map(X), n = tp.length;
+  if (prec > 0.03) {
+    const a = 0.85 * Math.pow(prec, 0.8);
+    const L = [], R = [];
+    for (let i = 0; i < n; i++) {
+      const p0 = tp[Math.max(0, i - 1)], p1 = tp[Math.min(n - 1, i + 1)]; const dx = p1[0] - p0[0], dy = p1[1] - p0[1], l = Math.hypot(dx, dy) || 1;
+      const w = P.tw * S * (1 - 0.65 * i / (n - 1)) / 2;
+      L.push([tp[i][0] - dy / l * w, tp[i][1] + dx / l * w]); R.push([tp[i][0] + dy / l * w, tp[i][1] - dx / l * w]);
+    }
+    Ink.line(g, L, Math.max(0.7, S * 0.0022), a); Ink.line(g, R, Math.max(0.7, S * 0.0022), a);
+    /* 樹皮の鱗 */
+    const br = rng(P.seed ^ 0xb4); const nBark = 70, show = nBark * Math.pow(prec, 1.3);
+    g.lineWidth = Math.max(0.5, S * 0.0015); g.strokeStyle = ink(a * 0.75);
+    for (let k = 0; k < nBark; k++) {
+      const t = br() * 0.92, o = br() - 0.5, s = br();
+      if (k >= show) continue;
+      const p = along(tp, t), w = P.tw * S * (1 - 0.65 * t);
+      g.beginPath(); g.ellipse(p[0] + o * w * 0.5, p[1], w * (0.16 + s * 0.14), w * 0.1, 0, 0, Math.PI); g.stroke();
+    }
+  }
+  if (d > 0.03) Ink.stroke(g, tp, { w0: P.tw * S * lerp(0.9, 1.6, d), w1: P.tw * S * 0.4, a: 0.9 * Math.pow(d, 0.75), dry: 0.2 + 0.55 * d, seed: P.seed ^ 0x77 });
+  /* 枝 */
+  for (const b of P.branches) {
+    const bp = b.pts.map(X);
+    if (prec > 0.03) {
+      Ink.line(g, bp, Math.max(0.7, b.w * S * 0.4), 0.75 * Math.pow(prec, 0.8));
+      for (const c of b.cl) { const e = [ox + c.x * S, oy + c.y * S]; const m = along(bp, 0.6); Ink.line(g, [m, [lerp(m[0], e[0], 0.5), lerp(m[1], e[1], 0.5) + 2], e], Math.max(0.5, S * 0.0014), 0.6 * prec); }
+    }
+    if (d > 0.03) Ink.stroke(g, bp, { w0: b.w * S * lerp(1, 1.9, d), w1: b.w * S * 0.3, a: 0.85 * Math.pow(d, 0.75), dry: 0.3 + 0.5 * d, seed: b.seed });
+  }
+  /* 葉群 */
+  for (const c of allC) if (keep(c)) drawCluster(g, c, d, S, ox, oy);
+}
+function drawCluster(g, c, d, S, ox, oy) {
+  const prec = 1 - d, cx = ox + c.x * S, cy = oy + c.y * S, rx = c.rx * S, ry = c.ry * S;
+  const r = rng(c.seed);
+  /* 精緻：針葉の扇（車輪状） */
+  const NF = 3, PER = 20, n = PER * Math.pow(prec, 1.15);
+  g.lineCap = 'round'; g.lineWidth = Math.max(0.5, S * 0.0013); g.strokeStyle = ink(0.78 * Math.pow(prec, 0.5)); g.beginPath();
+  for (let f = 0; f < NF; f++) {
+    const fx = cx + (f - 1) * rx * 0.55 + (r() - 0.5) * rx * 0.15, fy = cy + (r() - 0.5) * ry * 0.3 + (f === 1 ? -ry * 0.3 : 0);
+    const fr = rx * 0.48 * (0.8 + r() * 0.4), fry = ry * 1.15;
+    for (let i = 0; i < PER; i++) {
+      const a0 = r(), l0 = r();
+      if (i >= n) continue;
+      const ang = Math.PI * (1.04 + a0 * 0.92), L = 0.55 + 0.45 * l0;
+      g.moveTo(fx + Math.cos(ang) * fr * 0.08, fy); g.lineTo(fx + Math.cos(ang) * fr * L, fy + Math.sin(ang) * fry * L);
+    }
+  }
+  if (n > 0.5) g.stroke();
+  /* 荒い：すばやい打ち込み（葉群から下へ払う） */
+  const M = 7, m = d < 0.12 ? 0 : 1 + 6 * smooth(0.12, 0.7, d), aR = 0.85 * smooth(0.08, 0.7, d);
+  for (let k = 0; k < M; k++) {
+    const u1 = r(), u2 = r(), u3 = r(), u4 = r();
+    if (k >= m) continue;
+    const sx = cx + (u1 - 0.5) * rx * 1.7, sy = cy - ry * 0.55 + u2 * ry * 0.5;
+    const dir = c.side === 0 ? (u1 < 0.5 ? -1 : 1) : (u3 < 0.18 ? -c.side : c.side);
+    const dn = lerp(0.45, 1.25, u3);
+    const ang = dir > 0 ? dn : Math.PI - dn;
+    const L = ry * (1.2 + u4 * 1.3);
+    const pts = [[sx, sy], [sx + Math.cos(ang) * L * 0.5 - dir * ry * 0.1, sy + Math.sin(ang) * L * 0.5], [sx + Math.cos(ang) * L, sy + Math.sin(ang) * L]];
+    Ink.stroke(g, spline(pts, 4), { w0: ry * lerp(0.26, 0.4, d), w1: ry * 0.08, a: aR, dry: 0.55 + 0.35 * d, seed: c.seed + k * 31 });
+  }
+}
+
+/* =========================================================
+   スプライト（あらかじめ描いておく松・霊峰・霧）
+   ========================================================= */
+const PINES = Array.from({ length: 8 }, (_, i) => makePine(2027 + i * 7919));
+function makeSprite(pine, d, H) {
+  const S = H;
+  const pad = 0.05, w = (pine.maxX - pine.minX + pad * 2) * S, h = (-pine.top + 0.08) * S;
+  const c = newCanvas(w, h), g = c.getContext('2d');
+  const ox = (-pine.minX + pad) * S, oy = h - 0.03 * S;
+  drawPine(g, pine, d, S, ox, oy, { ground: true });
+  const s = newCanvas(Math.max(8, w / 6), Math.max(8, h / 6));
+  s.getContext('2d').drawImage(c, 0, 0, s.width, s.height);
+  return { c, s, w: c.width, h: c.height, ax: ox / c.width, ay: oy / c.height, S };
+}
+const Sprites = {
+  rough: [], fine: [], peak: null, mist: null, fineReq: false,
+  ensure() {
+    if (this.rough.length) return;
+    const n = [5, 6, 8][Q.level];
+    for (let i = 0; i < n; i++) this.rough.push(makeSprite(PINES[i], 0.86, Q.spriteH));
+    this.peak = makePeak(); this.mist = makeMist();
+  },
+  ensureFine() {
+    if (this.fine.length || this.fineReq) return;
+    this.fineReq = true;
+    let i = 0;
+    const step = () => { if (i < this.rough.length) { this.fine.push(makeSprite(PINES[i], 0.1, Q.spriteH)); i++; setTimeout(step, 0); } };
+    step();
+  },
+};
+function makePeak() {
+  const w = 360, h = 190, c = newCanvas(w, h), g = c.getContext('2d'), r = rng(11);
+  const pts = []; for (let i = 0; i <= 40; i++) { const t = i / 40; const x = t * w; const base = h * 0.95 - Math.pow(1 - Math.abs(t - 0.46) / 0.54, 1.6) * h * 0.82; pts.push([x, base + (r() - 0.5) * 4]); }
+  /* 白の中の白：稜線の外側に淡い墨をはき、峰そのものは白く残す */
+  g.save(); g.beginPath(); g.moveTo(0, 0); pts.forEach(p => g.lineTo(p[0], p[1])); g.lineTo(w, 0); g.closePath(); g.clip();
+  for (let i = 0; i < 14; i++) { const p = pts[4 + Math.floor(r() * 32)]; Ink.wash(g, p[0], p[1] - 6, 36 + r() * 30, 14 + r() * 8, 0.1); }
+  g.restore();
+  Ink.line(g, pts.slice(6, 36), 0.9, 0.22);
+  return c;
+}
+function makeMist() {
+  const w = 320, h = 110, c = newCanvas(w, h), g = c.getContext('2d'), r = rng(5);
+  for (let i = 0; i < 46; i++) {
+    const x = r() * w, y = h * (0.3 + r() * 0.45), rx = 30 + r() * 70, ry = 10 + r() * 20;
+    for (const dx of [-w, 0, w]) { /* 横につなげられるように */
+      g.save(); g.translate(x + dx, y); g.scale(1, ry / rx);
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, 'rgba(255,255,253,0.55)'); gr.addColorStop(1, 'rgba(255,255,253,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fill(); g.restore();
+    }
+  }
+  return c;
+}
+
+/* 靄 0 のときの「説明しすぎの絵」 */
+function drawScenery(g, W, H, hz) {
+  const r = rng(77); g.lineCap = 'round'; g.lineJoin = 'round';
+  /* 太陽・雲・鳥 */
+  g.strokeStyle = ink(0.55); g.lineWidth = 1.4;
+  g.beginPath(); g.arc(W * 0.8, H * 0.11, H * 0.035, 0, 7); g.stroke();
+  for (let i = 0; i < 3; i++) { const cx = W * (0.55 + i * 0.13), cy = H * (0.08 + i * 0.03); g.beginPath(); for (let k = 0; k < 4; k++) g.arc(cx + k * H * 0.025, cy, H * 0.016, Math.PI, 0); g.stroke(); }
+  for (let i = 0; i < 6; i++) { const x = W * (0.45 + r() * 0.45), y = H * (0.15 + r() * 0.12), s = 5 + r() * 5; g.beginPath(); g.moveTo(x - s, y - s * 0.4); g.quadraticCurveTo(x - s * 0.4, y - s * 0.5, x, y); g.quadraticCurveTo(x + s * 0.4, y - s * 0.5, x + s, y - s * 0.4); g.stroke(); }
+  /* 山並み 3 層（皴をつけて） */
+  const layers = [{ y: hz - H * 0.17, amp: H * 0.09, a: 0.18, f: 3.1 }, { y: hz - H * 0.1, amp: H * 0.07, a: 0.26, f: 4.3 }, { y: hz - H * 0.04, amp: H * 0.04, a: 0.36, f: 6.2 }];
+  layers.forEach((L, li) => {
+    const pts = []; const ph = r() * 6;
+    for (let x = 0; x <= W + 8; x += 8) pts.push([x, L.y - Math.abs(Math.sin(x / W * L.f + ph)) * L.amp - Math.sin(x / W * L.f * 2.7 + ph) * L.amp * 0.25]);
+    g.fillStyle = ink(L.a * 0.32); g.beginPath(); g.moveTo(0, hz); pts.forEach(p => g.lineTo(p[0], p[1])); g.lineTo(W, hz); g.closePath(); g.fill();
+    Ink.line(g, pts, 1.3, L.a + 0.3);
+    g.lineWidth = 0.8; g.strokeStyle = ink(L.a + 0.15);
+    for (let i = 0; i < pts.length; i += 2) { const p = pts[i]; const l = (hz - p[1]) * (0.25 + r() * 0.35); g.beginPath(); g.moveTo(p[0], p[1] + 2); g.lineTo(p[0] + (r() - 0.5) * 6, p[1] + l); g.stroke(); }
+    if (li === 1) for (let i = 0; i < 9; i++) { const p = pts[Math.floor(r() * pts.length)]; drawTinyPine(g, p[0], p[1] + 4, 9 + r() * 5); }
+  });
+  /* 地面と草 */
+  g.fillStyle = ink(0.06); g.fillRect(0, hz, W, H - hz);
+  Ink.line(g, [[0, hz], [W, hz]], 1, 0.5);
+  g.lineWidth = 0.9; g.strokeStyle = ink(0.45);
+  for (let i = 0; i < 260; i++) { const y = hz + Math.pow(r(), 1.6) * (H - hz), x = r() * W, s = 2 + (y - hz) / (H - hz) * 9; g.beginPath(); g.moveTo(x - s * 0.4, y - s); g.lineTo(x, y); g.lineTo(x + s * 0.4, y - s); g.stroke(); }
+  /* 道 */
+  const pathL = [], pathR = [];
+  for (let i = 0; i <= 20; i++) { const t = i / 20, y = lerp(H, hz + 2, t), cx = W * (0.5 + Math.sin(t * 3.2) * 0.12 * (1 - t) + t * 0.06), hw = lerp(W * 0.16, 3, Math.pow(t, 0.7)); pathL.push([cx - hw, y]); pathR.push([cx + hw, y]); }
+  g.fillStyle = 'rgba(250,249,245,1)'; g.beginPath(); pathL.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); pathR.slice().reverse().forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill();
+  Ink.line(g, pathL, 1.4, 0.7); Ink.line(g, pathR, 1.4, 0.7);
+  for (let i = 0; i < 40; i++) { const t = r() * 0.85, a = along(pathL, t), b = along(pathR, t), u = r(); const x = lerp(a[0], b[0], u), y = a[1]; const s = 1.5 + (1 - t) * 4; g.strokeStyle = ink(0.5); g.beginPath(); g.ellipse(x, y, s * 1.6, s * 0.7, 0, 0, 7); g.stroke(); }
+  /* 柵 */
+  for (let i = 0; i < 9; i++) { const t = 0.08 + i * 0.09, p = along(pathR, t), hgt = (1 - t) * H * 0.06 + 4; Ink.line(g, [[p[0] + 10 * (1 - t), p[1]], [p[0] + 10 * (1 - t), p[1] - hgt]], 1.6, 0.75); if (i) { const q = along(pathR, t - 0.09); Ink.line(g, [[q[0] + 10 * (1 - t + 0.09), q[1] - hgt * 1.1], [p[0] + 10 * (1 - t), p[1] - hgt * 0.7]], 1.1, 0.6); } }
+  /* 川と橋 */
+  const river = []; for (let i = 0; i <= 16; i++) { const t = i / 16; river.push([lerp(-10, W * 0.36, t) + Math.sin(t * 7) * 8, lerp(H * 0.86, hz + 6, Math.pow(t, 0.8))]); }
+  for (let k = -2; k <= 2; k++) Ink.line(g, river.map(([x, y], i) => [x + k * (10 - i * 0.5), y + k * 3]), 0.9, 0.45);
+  const bm = along(river, 0.45); Ink.line(g, [[bm[0] - 24, bm[1] - 8], [bm[0] + 24, bm[1] + 4]], 3, 0.8); Ink.line(g, [[bm[0] - 24, bm[1] - 16], [bm[0] + 24, bm[1] - 4]], 1, 0.7);
+  for (let k = 0; k < 4; k++) Ink.line(g, [[bm[0] - 24 + k * 16, bm[1] - 8 + k * 4], [bm[0] - 24 + k * 16, bm[1] - 16 + k * 4]], 1, 0.7);
+  /* 家 */
+  const hx = W * 0.66, hy = hz + H * 0.045, s = Math.min(W, H) * 0.09;
+  g.fillStyle = 'rgba(250,249,245,1)'; g.fillRect(hx - s * 0.6, hy - s * 0.55, s * 1.2, s * 0.55);
+  g.strokeStyle = ink(0.85); g.lineWidth = 1.3; g.strokeRect(hx - s * 0.6, hy - s * 0.55, s * 1.2, s * 0.55);
+  g.beginPath(); g.moveTo(hx - s * 0.8, hy - s * 0.5); g.lineTo(hx - s * 0.35, hy - s * 1.05); g.lineTo(hx + s * 0.35, hy - s * 1.05); g.lineTo(hx + s * 0.8, hy - s * 0.5); g.closePath(); g.fillStyle = ink(0.12); g.fill(); g.stroke();
+  g.lineWidth = 0.8; for (let i = 0; i < 16; i++) { const t = i / 15; g.beginPath(); g.moveTo(lerp(hx - s * 0.35, hx + s * 0.35, t), hy - s * 1.05); g.lineTo(lerp(hx - s * 0.8, hx + s * 0.8, t), hy - s * 0.5); g.stroke(); }
+  g.lineWidth = 1.1; g.strokeRect(hx - s * 0.12, hy - s * 0.38, s * 0.22, s * 0.38); g.strokeRect(hx + s * 0.22, hy - s * 0.42, s * 0.24, s * 0.18);
+  g.beginPath(); g.moveTo(hx + s * 0.34, hy - s * 0.42); g.lineTo(hx + s * 0.34, hy - s * 0.24); g.moveTo(hx + s * 0.22, hy - s * 0.33); g.lineTo(hx + s * 0.46, hy - s * 0.33); g.stroke();
+  g.beginPath(); g.moveTo(hx + s * 0.25, hy - s * 1.0); for (let i = 1; i < 8; i++) g.lineTo(hx + s * 0.25 + Math.sin(i * 1.3) * 6, hy - s * 1.0 - i * 7); g.stroke();
+  /* 人 */
+  const pp = along(pathL, 0.32), px = pp[0] + 28, py = pp[1] - 2, ps = H * 0.05;
+  g.strokeStyle = ink(0.85); g.lineWidth = 1.5; g.beginPath(); g.arc(px, py - ps * 0.85, ps * 0.12, 0, 7); g.stroke();
+  g.beginPath(); g.moveTo(px - ps * 0.35, py - ps * 0.93); g.lineTo(px, py - ps * 1.15); g.lineTo(px + ps * 0.35, py - ps * 0.93); g.closePath(); g.stroke();
+  Ink.line(g, [[px, py - ps * 0.72], [px, py - ps * 0.35], [px - ps * 0.15, py]], 1.5, 0.85); Ink.line(g, [[px, py - ps * 0.35], [px + ps * 0.15, py]], 1.5, 0.85); Ink.line(g, [[px - ps * 0.2, py - ps * 0.55], [px, py - ps * 0.65], [px + ps * 0.22, py - ps * 0.5]], 1.4, 0.85);
+  /* 霊峰もくっきり */
+  const pk = Peak.rect(W, H); g.save(); g.globalAlpha = 1; g.drawImage(Sprites.peak, pk.x, pk.y, pk.w, pk.h); g.restore();
+  g.lineWidth = 0.8; g.strokeStyle = ink(0.4);
+  for (let i = 0; i < 26; i++) { const t = 0.15 + r() * 0.7, x = pk.x + pk.w * t, top = pk.y + pk.h * (0.95 - Math.pow(1 - Math.abs(t - 0.46) / 0.54, 1.6) * 0.82); g.beginPath(); g.moveTo(x, top + 3); g.lineTo(x + (t < 0.46 ? -6 : 6), top + 12 + r() * pk.h * 0.2); g.stroke(); }
+}
+function drawTinyPine(g, x, y, s) { Ink.line(g, [[x, y], [x, y - s]], 1, 0.6); for (let k = 0; k < 3; k++) { const yy = y - s * (0.45 + k * 0.25), w = s * (0.5 - k * 0.12); Ink.line(g, [[x - w, yy + 2], [x, yy - 1], [x + w, yy + 2]], 1, 0.6); } }
+const Peak = { rect(W, H) { const w = Math.min(W * 0.42, H * 0.6), h = w * 190 / 360; return { x: W * 0.04, y: H * 0.05, w, h }; } };
+
+/* =========================================================
+   霧の松林（Canvas 2D の 2.5D）
+   ========================================================= */
+class Forest {
+  constructor(cv, opt = {}) {
+    this.cv = cv; this.g = cv.getContext('2d', { alpha: false });
+    this.mist = opt.mist ?? 0.7; this.walk = opt.walk !== false; this.auto = opt.auto || 0;
+    this.camZ = 0; this.vel = 0; this.push = 0; this.time = 0; this.running = false;
+    this.far = 9; this.words = null; this.wordOpt = { size: 16, max: 8 };
+    this.onTap = opt.onTap || null; this.onMove = opt.onMove || null;
+    this.pines = []; this.rand = rng(opt.seed || 99);
+    this._loop = t => this.loop(t);
+    this.perfAcc = 0; this.perfN = 0;
+    this.bind();
+  }
+  resize() {
+    const r = this.cv.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false;
+    const dpr = Math.min(window.devicePixelRatio || 1, Q.dprCap);
+    this.W = r.width; this.H = r.height; this.dpr = dpr;
+    this.cv.width = Math.round(r.width * dpr); this.cv.height = Math.round(r.height * dpr);
+    this.f = Math.min(this.H * 0.95, this.W * 1.5);
+    this.hz = this.H * 0.5; this.eye = 0.5;
+    this.X = (this.W / 2) / (this.f / (this.far * 0.55)) * 1.15;
+    this.scenery = null;
+    return true;
+  }
+  spawnX() { let x = (this.rand() * 2 - 1) * this.X; if (Math.abs(x) < 0.22) x += Math.sign(x || 1) * 0.22; return x; }
+  populate() {
+    Sprites.ensure();
+    const N = Q.pines; this.pines = [];
+    for (let i = 0; i < N; i++) this.pines.push(this.newPine(this.camZ + 0.5 + (i + this.rand()) / N * (this.far - 0.5)));
+  }
+  newPine(z) { return { z, x: this.spawnX(), v: Math.floor(this.rand() * Sprites.rough.length), hs: 1.0 + this.rand() * 0.6, flip: this.rand() < 0.5 }; }
+  start() { if (this.running) return; if (!this.W && !this.resize()) { requestAnimationFrame(() => this.start()); return; } if (!this.pines.length) this.populate(); this.running = true; this.last = performance.now(); requestAnimationFrame(this._loop); }
+  stop() { this.running = false; this.push = 0; }
+  drawOnce() { if (!this.resize()) return; if (!this.pines.length) this.populate(); this.draw(); }
+  loop(t) {
+    if (!this.running) return;
+    const dt = Math.min(0.05, (t - this.last) / 1000 || 0.016); this.last = t;
+    this.update(dt); this.draw(); this.perf(dt);
+    requestAnimationFrame(this._loop);
+  }
+  update(dt) {
+    this.time += dt;
+    if (this.push) this.vel = lerp(this.vel, this.push * 1.1, 1 - Math.exp(-dt * 4));
+    else this.vel *= Math.exp(-dt * 1.7);
+    if (Math.abs(this.vel) < 0.002) this.vel = 0;
+    const v = this.vel + this.auto; this.camZ += v * dt;
+    for (const p of this.pines) {
+      const dz = p.z - this.camZ;
+      if (dz < 0.32) Object.assign(p, this.newPine(this.camZ + this.far * (0.85 + this.rand() * 0.15)));
+      else if (dz > this.far + 0.6) Object.assign(p, this.newPine(this.camZ + 0.4 + this.rand() * 0.4));
+    }
+    if (this.onMove) this.onMove(Math.abs(v));
+  }
+  perf(dt) {
+    this.perfAcc += dt; this.perfN++;
+    if (this.perfAcc > 2.5) {
+      const avg = this.perfAcc / this.perfN; this.perfAcc = 0; this.perfN = 0;
+      if (avg > 0.03 && Q.level > 0) { Q.level--; this.resize(); this.pines.length = Math.min(this.pines.length, Q.pines); }
+    }
+  }
+  draw() {
+    const g = this.g, W = this.W, H = this.H, dpr = this.dpr, mist = this.mist;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = '#f7f6f2'; g.fillRect(0, 0, W, H);
+    /* 靄 0 に近いほど「説明しすぎの絵」が現れる */
+    const sceneA = 1 - smooth(0.02, 0.5, mist);
+    const peakR = Peak.rect(W, H);
+    g.globalAlpha = lerp(0.85, 0.5, mist) * (1 - sceneA); if (g.globalAlpha > 0.01) g.drawImage(Sprites.peak, peakR.x, peakR.y, peakR.w, peakR.h);
+    if (sceneA > 0.01) {
+      if (!this.scenery) { this.scenery = newCanvas(W * dpr, H * dpr); const sg = this.scenery.getContext('2d'); sg.scale(dpr, dpr); drawScenery(sg, W, H, this.hz); }
+      g.globalAlpha = sceneA; g.drawImage(this.scenery, 0, 0, W, H);
+    }
+    const fineMix = 1 - smooth(0.04, 0.4, mist);
+    if (fineMix > 0) Sprites.ensureFine();
+    const k = 0.05 + Math.pow(mist, 1.4) * 0.72;
+    /* 奥から順に並べる（松と霧の層） */
+    const items = [];
+    for (const p of this.pines) items.push({ dz: p.z - this.camZ, p });
+    const ML = Q.mistLayers;
+    for (let i = 0; i < ML; i++) items.push({ dz: [6.2, 3.4, 1.8][i], m: i });
+    items.sort((a, b) => b.dz - a.dz);
+    for (const it of items) {
+      const dz = it.dz, s = this.f / dz;
+      if (it.m !== undefined) {
+        const a = mist * 0.75; if (a < 0.02) continue;
+        const tex = Sprites.mist, tw = W * 1.4, th = H * (0.28 + 0.12 * it.m), y = this.hz + this.eye * s - th * 0.75;
+        let off = ((this.time * (6 + it.m * 5) + this.camZ * 40 / dz + it.m * 137) % tw); if (off < 0) off += tw;
+        g.globalAlpha = a; g.drawImage(tex, -off, y, tw, th); g.drawImage(tex, tw - off, y, tw, th);
+        continue;
+      }
+      const p = it.p;
+      let a = Math.exp(-k * Math.max(0, dz - 0.5)) * smooth(0.32, 1.05, dz) * smooth(this.far + 0.4, this.far - 1.2, dz);
+      if (a < 0.012) continue;
+      const sx = W / 2 + p.x * s, sy = this.hz + this.eye * s;
+      const sp = Sprites.rough[p.v % Sprites.rough.length], hpx = p.hs * s, sc = hpx / sp.S, dw = sp.w * sc, dh = sp.h * sc;
+      const x0 = sx - sp.ax * dw, y0 = sy - sp.ay * dh;
+      if (x0 > W || x0 + dw < 0) continue;
+      const soft = smooth(2.2, 5.5, dz) * (0.4 + 0.6 * mist);
+      const fine = fineMix > 0 ? Sprites.fine[p.v % Sprites.rough.length] : null;
+      if (p.flip) { g.save(); g.translate(sx * 2, 0); g.scale(-1, 1); }
+      const put = (spr, al) => { if (al < 0.01) return; g.globalAlpha = al; g.drawImage(spr, x0, y0, dw, dh); };
+      if (fine) { put(fine.c, a * fineMix); a *= (1 - fineMix); }
+      put(sp.s, a * soft); put(sp.c, a * (1 - soft));
+      if (p.flip) g.restore();
+    }
+    /* 地平の霧 */
+    if (mist > 0.05) {
+      const gr = g.createLinearGradient(0, this.hz - H * 0.25, 0, this.hz + H * 0.2);
+      gr.addColorStop(0, 'rgba(247,246,242,0)'); gr.addColorStop(0.55, `rgba(247,246,242,${(mist * 0.55).toFixed(3)})`); gr.addColorStop(1, 'rgba(247,246,242,0)');
+      g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(0, this.hz - H * 0.25, W, H * 0.45);
+    }
+    g.globalAlpha = 1;
+    if (this.words && this.words.length) this.drawWords();
+  }
+  drawWords() {
+    const g = this.g, W = this.W, H = this.H, list = this.words, N = list.length;
+    const M = this.wordOpt.max, life = 12, L = Math.max(life, N * life / M);
+    const size = this.wordOpt.size;
+    g.font = `${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    for (let i = 0; i < N; i++) {
+      const w = list[i];
+      const start = w.start != null ? w.start : i * L / N;
+      let ph = ((this.time - start) % L + L) % L;
+      if (w.start != null && this.time - w.start < life) ph = this.time - w.start;
+      if (ph > life) continue;
+      const a = Math.sin(Math.PI * ph / life); if (a < 0.02) continue;
+      const tw = g.measureText(w.text).width;
+      const x = clamp(w.x * W, tw / 2 + 6, W - tw / 2 - 6), y = clamp(w.y * H - ph * 1.2, size, H - size);
+      g.globalAlpha = a * 0.9; g.lineWidth = size * 0.32; g.strokeStyle = 'rgba(247,246,242,0.9)'; g.strokeText(w.text, x, y);
+      g.fillStyle = 'rgba(40,40,40,0.82)'; g.fillText(w.text, x, y);
+    }
+    g.globalAlpha = 1;
+  }
+  isWhite(x, y) {
+    try { const d = this.g.getImageData(Math.round(x * this.dpr), Math.round(y * this.dpr), 1, 1).data; return (d[0] + d[1] + d[2]) / 3 > 222; } catch (e) { return true; }
+  }
+  bind() {
+    const cv = this.cv; let drag = null;
+    cv.addEventListener('pointerdown', e => {
+      if (e.button) return;
+      try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+      drag = { x: e.clientX, y: e.clientY, ly: e.clientY, lt: performance.now(), t0: performance.now(), moved: 0 };
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const now = performance.now(), dy = e.clientY - drag.ly;
+      drag.moved += Math.abs(dy) + Math.abs(e.clientX - drag.x) * 0.1;
+      if (this.walk && this.H) {
+        const dz = -dy / this.H * 3.2; this.camZ += dz;
+        const dt = Math.max(8, now - drag.lt) / 1000; this.vel = lerp(this.vel, clamp(dz / dt, -3, 3), 0.5);
+      }
+      drag.ly = e.clientY; drag.lt = now;
+    });
+    const end = e => {
+      if (!drag) return;
+      const r = cv.getBoundingClientRect();
+      if (drag.moved < 10 && performance.now() - drag.t0 < 600 && this.onTap) this.onTap(e.clientX - r.left, e.clientY - r.top);
+      if (performance.now() - drag.lt > 120) this.vel = 0;
+      drag = null;
+    };
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', () => { drag = null; });
+    cv.addEventListener('wheel', e => { if (!this.walk) return; e.preventDefault(); this.vel = clamp(this.vel + e.deltaY * 0.0022, -2.5, 2.5); }, { passive: false });
+  }
+}
+
+/* =========================================================
+   松風（Web Audio で合成、既定はオフ）
+   ========================================================= */
+const Sound = {
+  ctx: null, on: false,
+  init() {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+    try {
+      const c = this.ctx = new AC(), len = c.sampleRate * 4, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0527; d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.16; }
+      const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 0.7;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+      const swell = c.createGain(); swell.gain.value = 0.35;
+      this.level = c.createGain(); this.level.gain.value = 0.5;
+      this.master = c.createGain(); this.master.gain.value = 0;
+      const l1 = c.createOscillator(); l1.frequency.value = 0.06; const l1g = c.createGain(); l1g.gain.value = 320; l1.connect(l1g).connect(bp.frequency);
+      const l2 = c.createOscillator(); l2.frequency.value = 0.11; const l2g = c.createGain(); l2g.gain.value = 0.22; l2.connect(l2g).connect(swell.gain);
+      src.connect(bp).connect(lp).connect(swell).connect(this.level).connect(this.master).connect(c.destination);
+      src.start(); l1.start(); l2.start();
+      return true;
+    } catch (e) { this.ctx = null; return false; }
+  },
+  set(on) {
+    if (on && !this.ctx && !this.init()) return false;
+    if (!this.ctx) return false;
+    if (on && this.ctx.state === 'suspended') this.ctx.resume();
+    this.on = on; this.master.gain.setTargetAtTime(on ? 0.6 : 0, this.ctx.currentTime, 0.5);
+    return true;
+  },
+  move(v) { if (this.on && this.level) this.level.gain.setTargetAtTime(0.45 + clamp(v, 0, 1.5) * 0.45, this.ctx.currentTime, 0.6); },
+};
+
+/* =========================================================
+   投稿のチェック（GAS 側と同じ規則）
+   ========================================================= */
+const NG = ['しね', '死ね', 'ころす', '殺す', 'ころせ', '殺せ', 'きもい', 'きしょい', 'うざい', 'うぜ', 'ばか(?!り|す)', '馬鹿', 'あほ(?!う)', '阿呆', 'ぶす(?!い)', 'くず(?!れ|す|も)', 'きえろ', '消えろ', '死んで', 'ちんこ', 'まんこ', 'うんこ', 'ちんちん', 'おっぱい', 'せっくす', 'sex', 'fuck', 'shit', 'でぶ', 'はげ(?!し|む|ま)'].map(s => new RegExp(s));
+function normText(s) { return String(s || '').normalize('NFKC').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)).toLowerCase().replace(/[\s・．。、,.!！?？ー〜~_\-]/g, ''); }
+function checkText(text) {
+  const t = String(text || '').normalize('NFKC').replace(/\s+/g, ' ').trim(), len = Array.from(t).length;
+  if (len < 1 || len > CONFIG.MAX_LEN) return { error: 'length' };
+  if (/(\d[\d\-]{7,}\d)|@|https?:|www\.|\.(com|jp|net)/i.test(t)) return { error: 'personal' };
+  const n = normText(t); if (NG.some(re => re.test(n))) return { error: 'ng' };
+  return { text: t };
+}
+const ERR = {
+  ng: 'その言葉は使えません。別の言葉で書いてみよう。', personal: '電話番号・メールアドレス・URL は書けません。', length: '1〜30字で書いてください。',
+  rate: `少し待ってから書いてね（${CONFIG.POST_INTERVAL_SEC}秒に1回）。`, limit: `書けるのは1人${CONFIG.MAX_POSTS}個までです。`, closed: 'いまは受付を停止しています。',
+  class: 'ホームでクラスコードを入れてください。', client: '端末の識別に失敗しました。', network: '共有先につながりません。少し待ってもう一度。', pin: 'PIN がちがいます。',
+  locked: 'PIN のまちがいが続いたため、10分間受け付けません。', nopin: 'GAS 側でスクリプト プロパティ TEACHER_PIN が設定されていません。', server: '共有先でエラーが起きました。', unknown: '共有先が古い版かもしれません。',
+};
+const errMsg = e => ERR[e] || ('エラー：' + e);
+
+/* =========================================================
+   共有（GAS ウェブアプリ／なければ端末内のみ）
+   ========================================================= */
+const Share = {
+  subs: new Set(), timer: null, last: null,
+  get url() { return Store.d.gasUrl || CONFIG.GAS_URL || ''; },
+  get mode() { return this.url ? 'gas' : 'local'; },
+  get cls() { return (Store.d.classCode || '').toUpperCase(); },
+  label() { return this.mode === 'gas' ? `クラス ${this.cls || '（未設定）'} で共有中` : '端末内のみ（共有されません）'; },
+  /* --- 端末内 --- */
+  lkey() { return 'kuuhaku.local.' + (this.cls || 'LOCAL'); },
+  lload() { let o = null; try { o = JSON.parse(localStorage.getItem(this.lkey()) || 'null'); } catch (e) {} return Object.assign({ open: true, posts: [], votes: { brush: {}, mist: {} } }, o || {}); },
+  lsave(o) { try { localStorage.setItem(this.lkey(), JSON.stringify(o)); } catch (e) {} },
+  bins(map) { const b = Array(10).fill(0); Object.values(map || {}).forEach(v => b[Math.min(9, Math.floor(v / 10))]++); return b; },
+  /* --- 通信 --- */
+  async req(params, post) {
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const to = setTimeout(() => ctl && ctl.abort(), 15000);
+    try {
+      let res;
+      if (post) res = await fetch(this.url, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(params), signal: ctl && ctl.signal });
+      else { const u = new URL(this.url); Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v)); res = await fetch(u.toString(), { redirect: 'follow', cache: 'no-store', signal: ctl && ctl.signal }); }
+      return await res.json();
+    } catch (e) { return { ok: false, error: 'network' }; } finally { clearTimeout(to); }
+  },
+  async state() {
+    if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; return this.req({ action: 'state', class: this.cls }); }
+    const o = this.lload();
+    return { ok: true, local: true, open: o.open, posts: o.posts.filter(p => !p.hidden), votes: { brush: this.bins(o.votes.brush), mist: this.bins(o.votes.mist) } };
+  },
+  async post(text, x, y) {
+    const c = checkText(text); if (c.error) return { ok: false, error: c.error };
+    const now = Date.now();
+    if (this.last && this.last.open === false) return { ok: false, error: 'closed' };
+    if (now - (Store.d.lastPostAt || 0) < CONFIG.POST_INTERVAL_SEC * 1000) return { ok: false, error: 'rate' };
+    let r;
+    if (this.mode === 'gas') {
+      if (!this.cls) return { ok: false, error: 'class' };
+      r = await this.req({ action: 'post', class: this.cls, client: Store.d.client, text: c.text, x, y }, true);
+    } else {
+      const o = this.lload();
+      if (!o.open) return { ok: false, error: 'closed' };
+      if (o.posts.filter(p => p.client === Store.d.client).length >= CONFIG.MAX_POSTS) return { ok: false, error: 'limit' };
+      const p = { id: 'L' + now.toString(36), text: c.text, x: +x.toFixed(3), y: +y.toFixed(3), t: now, client: Store.d.client, hidden: false };
+      o.posts.push(p); this.lsave(o); r = { ok: true, post: p };
+    }
+    if (r.ok) { Store.d.lastPostAt = now; Store.d.myPosts.push({ text: c.text, x, y, t: now }); Store.save(); this.kick(); }
+    return r;
+  },
+  async vote(kind, value) {
+    value = clamp(Math.round(value), 0, 100);
+    let r;
+    if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; r = await this.req({ action: 'vote', class: this.cls, client: Store.d.client, kind, value }, true); }
+    else { const o = this.lload(); o.votes[kind] = o.votes[kind] || {}; o.votes[kind][Store.d.client] = value; this.lsave(o); r = { ok: true }; }
+    if (r.ok) this.kick();
+    return r;
+  },
+  async admin(op, extra = {}, pin = '') {
+    if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; return this.req(Object.assign({ action: 'admin', class: this.cls, pin, op }, extra), true); }
+    const o = this.lload();
+    switch (op) {
+      case 'hide': case 'unhide': { const p = o.posts.find(p => p.id === extra.id); if (p) p.hidden = op === 'hide'; break; }
+      case 'clear': o.posts = []; break;
+      case 'clearVotes': o.votes = { brush: {}, mist: {} }; break;
+      case 'open': o.open = true; break;
+      case 'close': o.open = false; break;
+    }
+    this.lsave(o); this.kick();
+    return { ok: true, open: o.open, posts: o.posts.map(p => ({ id: p.id, text: p.text, t: p.t, hidden: !!p.hidden })) };
+  },
+  /* --- ポーリング --- */
+  subscribe(fn) { this.subs.add(fn); if (this.last) fn(this.last); this.kick(); return () => { this.subs.delete(fn); if (!this.subs.size) { clearTimeout(this.timer); this.timer = null; } }; },
+  kick() { clearTimeout(this.timer); this.timer = setTimeout(() => this.tick(), 50); },
+  async tick() {
+    if (!this.subs.size) return;
+    if (document.hidden) { this.timer = setTimeout(() => this.tick(), 3000); return; }
+    const s = await this.state();
+    if (s.ok) this.last = s;
+    this.subs.forEach(f => f(s));
+    if (this.subs.size) { clearTimeout(this.timer); this.timer = setTimeout(() => this.tick(), (this.mode === 'gas' ? CONFIG.POLL_MS : 4000) + Math.random() * 2000); }
+  },
+};
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Share.subs.size) Share.kick(); });
+window.addEventListener('storage', e => { if (e.key && e.key.startsWith('kuuhaku.local.') && Share.subs.size) Share.kick(); });
+
+function renderHist(el, bins, mine) {
+  bins = bins || Array(10).fill(0);
+  const max = Math.max(1, ...bins), mb = mine == null ? -1 : Math.min(9, Math.floor(mine / 10));
+  el.innerHTML = bins.map((n, i) => { const h = (n / max * 100).toFixed(1) + '%'; return `<div class="bar${i === mb ? ' mine' : ''}" style="--h:${h}" aria-label="${i * 10}〜${i === 9 ? 100 : i * 10 + 9}：${n}人"><i style="height:${h}"></i><b>${n || ''}</b></div>`; }).join('');
+}
+function updateShareNotes() {
+  const t = Share.mode === 'gas' ? `共有：${Share.label()}（約${CONFIG.POLL_MS / 1000}秒ごとに更新）` : '共有：端末内のみ（この端末の記録だけが表示されます。共有するには教員が GAS を設定します）';
+  $$('[data-share-note]').forEach(e => e.textContent = t);
+  const pill = Share.mode === 'gas' ? '<span class="mode-pill gas">共有</span>' : '<span class="mode-pill">端末内</span>';
+  $('#shareStatus').innerHTML = `${pill} ${esc(Share.label())}${Share.mode === 'gas' && !Share.cls ? '。クラスコードを入れてください。' : ''}`;
+}
+
+/* =========================================================
+   画面の切り替え
+   ========================================================= */
+const Screens = {};
+let current = null;
+function route() {
+  const h = location.hash.replace(/^#\/?/, '') || 'home';
+  const [name, arg] = h.split('/');
+  const sc = Screens[name] ? name : 'home';
+  if (current && Screens[current].leave) Screens[current].leave();
+  $$('.screen').forEach(s => s.classList.toggle('on', s.id === 's-' + sc));
+  document.body.dataset.screen = sc; current = sc;
+  $('#barTitle').textContent = Screens[sc].title || '';
+  window.scrollTo(0, 0);
+  if (Screens[sc].enter) Screens[sc].enter(arg);
+}
+window.addEventListener('hashchange', route);
+let resizeT = null;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { const s = Screens[current]; if (s && s.resize) s.resize(); }, 150); });
+
+/* ---------- ホーム ---------- */
+let hero = null;
+Screens.home = {
+  title: '',
+  enter() {
+    $('#classInput').value = Store.d.classCode || '';
+    updateShareNotes();
+    if (!hero) hero = new Forest($('#heroCv'), { mist: 0.72, walk: false, seed: 3 });
+    requestAnimationFrame(() => { hero.camZ = 0.6; hero.drawOnce(); });
+  },
+  resize() { hero && hero.drawOnce(); },
+};
+$('#classSave').addEventListener('click', () => {
+  const v = $('#classInput').value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 16);
+  $('#classInput').value = v; Store.set('classCode', v); Share.last = null; updateShareNotes();
+});
+$('#classInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#classSave').click(); });
+
+/* ---------- 授業モード ---------- */
+function applyLesson() { document.body.classList.toggle('lesson', !!Store.d.lesson); $('#lessonBtn').setAttribute('aria-pressed', String(!!Store.d.lesson)); }
+$('#lessonBtn').addEventListener('click', () => { Store.set('lesson', !Store.d.lesson); applyLesson(); setTimeout(() => { const s = Screens[current]; s && s.resize && s.resize(); }, 60); });
+
+/* ---------- うめたい度チェック ---------- */
+const CHECK_Q = ['会話が途切れると、話したくなる', 'ノートは余白なくびっしり書く', '部屋や机は物が多いと落ち着く', '映画や小説は全部説明してほしい', '返信がないと落ち着かない', '白い紙を渡されると困ってしまう'];
+const OPT = ['あてはまらない', 'あまりあてはまらない', 'ややあてはまる', 'あてはまる'];
+const TYPES = [
+  { min: 6, max: 10, name: '余白たのしみ派', bg: '#fffefb', fg: '#1c1c1c', text: '空白を「これから何かが入る場所」として、そのまま味わえるタイプ。' },
+  { min: 11, max: 15, name: 'バランス派', bg: '#cfcdc7', fg: '#1c1c1c', text: '空白を楽しむときと、うめたくなるときの両方があるタイプ。' },
+  { min: 16, max: 20, name: 'ちょっと苦手派', bg: '#7d7b76', fg: '#fff', text: '空白があると、何かで満たしたくなることが多いタイプ。' },
+  { min: 21, max: 24, name: 'うめつくし派', bg: '#262626', fg: '#fff', text: '空白を見つけるとすぐに満たしたくなる、エネルギーにあふれたタイプ。' },
+];
+const sum = a => a ? a.reduce((s, v) => s + v, 0) : null;
+const typeOf = s => TYPES.find(t => s >= t.min && s <= t.max);
+function renderKake(el, pre, post) {
+  const pos = s => ((s - 6) / 18 * 100).toFixed(1) + '%';
+  const bands = TYPES.map(t => `<div class="band" style="--f:${t.max - t.min + 1};background:${t.bg};color:${t.fg}">${t.name}<br>${t.min}〜${t.max}</div>`).join('');
+  const mk = (s, cls, lab) => s == null ? '' : `<div class="mk ${cls}" style="top:${pos(s)}"><span>${lab}</span></div>`;
+  const ps = sum(pre), qs = sum(post);
+  const line = (lab, s) => s == null ? `<p>${lab}：まだ答えていません</p>` : `<p>${lab}：<span class="typebox">${s}点・${typeOf(s).name}</span><br><span class="note">${typeOf(s).text}</span></p>`;
+  el.innerHTML = `<div class="jiku" aria-hidden="true"><div class="paper">${bands}${mk(ps, 'pre', '前')}${mk(qs, 'post', '後')}</div></div>
+    <div class="desc">${line('前', ps)}${line('後', qs)}<p class="note"><b>どのタイプにも良し悪しはありません。</b>空白をうめたくなる気持ちも、空白に「何かが入る予兆」を感じているからこそかもしれません（145・4）。</p></div>`;
+}
+let checkWhich = 'pre', checkAns = [];
+Screens.check = {
+  title: 'うめたい度チェック',
+  enter(arg) {
+    checkWhich = arg === 'post' ? 'post' : 'pre';
+    checkAns = (Store.d[checkWhich] || []).slice(); while (checkAns.length < 6) checkAns.push(0);
+    $('#checkTitle').textContent = `空白うめたい度チェック（${checkWhich === 'pre' ? '前' : '後'}）`;
+    $('#checkList').innerHTML = CHECK_Q.map((q, i) => `<li><p>${q}</p><div class="opts" role="group" aria-label="${esc(q)}">${OPT.map((o, k) => `<button type="button" data-q="${i}" data-v="${k + 1}" aria-pressed="${checkAns[i] === k + 1}"><b>${k + 1}</b>${o}</button>`).join('')}</div></li>`).join('');
+    $('#checkResult').hidden = !Store.d[checkWhich];
+    if (Store.d[checkWhich]) this.show();
+    $('#checkDone').disabled = checkAns.some(v => !v);
+  },
+  show() {
+    $('#checkResult').hidden = false;
+    renderKake($('#checkKake'), Store.d.pre, Store.d.post);
+    $('#checkNext').innerHTML = checkWhich === 'pre' ? '<a class="btn primary" href="#/lab">次へ：補完ラボ</a><a class="btn" href="#/home">ホーム</a>' : '<a class="btn primary" href="#/reflect">振り返りへ</a>';
+  },
+};
+$('#checkList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-q]'); if (!b) return;
+  const i = +b.dataset.q; checkAns[i] = +b.dataset.v;
+  $$(`button[data-q="${i}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  $('#checkDone').disabled = checkAns.some(v => !v);
+});
+$('#checkDone').addEventListener('click', () => { Store.set(checkWhich, checkAns.slice()); Screens.check.show(); $('#checkResult').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+
+/* ---------- 補完ラボ ---------- */
+let labI = 0, blurLv = 0, hideOpen = false;
+const BLUR = [28, 14, 7, 3, 1];
+Screens.lab = {
+  title: '補完ラボ',
+  enter() { buildKanizsa(); buildManga(); drawHide(); drawBlur(); this.go(labI); },
+  go(i) {
+    labI = clamp(i, 0, 3);
+    $$('.labstep').forEach(s => s.classList.toggle('on', +s.dataset.step === labI));
+    $$('#labDots button').forEach(b => b.setAttribute('aria-current', String(+b.dataset.i === labI)));
+    $('#labPrev').disabled = labI === 0;
+    $('#labNext').textContent = labI === 3 ? '次へ：描き込みスライダー →' : '次へ →';
+  },
+};
+$('#labDots').addEventListener('click', e => { const b = e.target.closest('button'); if (b) Screens.lab.go(+b.dataset.i); });
+$('#labPrev').addEventListener('click', () => Screens.lab.go(labI - 1));
+$('#labNext').addEventListener('click', () => { if (labI === 3) location.hash = '#/brush'; else Screens.lab.go(labI + 1); });
+function buildKanizsa(showLine) {
+  const cx = 160, cy = 160, R = 105, rr = 34, V = [0, 1, 2].map(k => { const a = -Math.PI / 2 + k * 2 * Math.PI / 3; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+  let s = '';
+  V.forEach((v, k) => {
+    const o1 = V[(k + 1) % 3], o2 = V[(k + 2) % 3];
+    const a1 = Math.atan2(o1[1] - v[1], o1[0] - v[0]), a2 = Math.atan2(o2[1] - v[1], o2[0] - v[0]);
+    let lo = Math.min(a1, a2), hi = Math.max(a1, a2); if (hi - lo > Math.PI) { const t = lo; lo = hi; hi = t + 2 * Math.PI; }
+    const p = a => `${(v[0] + rr * Math.cos(a)).toFixed(2)} ${(v[1] + rr * Math.sin(a)).toFixed(2)}`;
+    s += `<path d="M${v[0].toFixed(2)} ${v[1].toFixed(2)} L${p(hi)} A${rr} ${rr} 0 1 1 ${p(lo)} Z" fill="#1c1c1c"/>`;
+  });
+  /* 逆向きの三角形（角だけ） */
+  const U = [0, 1, 2].map(k => { const a = Math.PI / 2 + k * 2 * Math.PI / 3; return [cx + R * 0.95 * Math.cos(a), cy - 8 + R * 0.95 * Math.sin(a)]; });
+  U.forEach((u, k) => { const n1 = U[(k + 1) % 3], n2 = U[(k + 2) % 3], t = 0.24; s += `<path d="M${lerp(u[0], n1[0], t)} ${lerp(u[1], n1[1], t)} L${u[0]} ${u[1]} L${lerp(u[0], n2[0], t)} ${lerp(u[1], n2[1], t)}" fill="none" stroke="#1c1c1c" stroke-width="3"/>`; });
+  if (showLine) s += `<path d="M${V.map(v => v.join(' ')).join(' L')} Z" fill="none" stroke="#7a2b22" stroke-width="2" stroke-dasharray="6 5"/>`;
+  $('#kanizsa').innerHTML = `<rect width="320" height="300" fill="#fffefb"/>${s}`;
+}
+$('#kzLine').addEventListener('click', e => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); buildKanizsa(on);
+  $('#kzNote').textContent = on ? '赤い点線のところに、実際の線はありません。見ている人の頭が、白い三角形を「補って」います。' : '';
+});
+function drawHide() {
+  const cv = $('#hideCv'), g = cv.getContext('2d'); g.fillStyle = '#fffefb'; g.fillRect(0, 0, cv.width, cv.height);
+  const P = PINES[2]; drawPine(g, P, 0.55, 300, 140, 340, { ground: true }); drawPine(g, PINES[5], 0.75, 230, 380, 335, { ground: true });
+  if (!hideOpen) { const gr = g.createLinearGradient(0, 70, 0, 260); gr.addColorStop(0, 'rgba(255,254,251,0)'); gr.addColorStop(0.25, 'rgba(255,254,251,1)'); gr.addColorStop(0.75, 'rgba(255,254,251,1)'); gr.addColorStop(1, 'rgba(255,254,251,0)'); g.fillStyle = gr; g.fillRect(0, 70, cv.width, 190); }
+}
+$('#hideBtn').addEventListener('click', e => { hideOpen = !hideOpen; e.currentTarget.setAttribute('aria-pressed', String(hideOpen)); e.currentTarget.textContent = hideOpen ? 'もう一度隠す' : '霧を晴らす'; drawHide(); $('#hideNote').textContent = hideOpen ? '想像した松と同じでしたか？ 隠れていたあいだも、あなたの頭の中には何かが「あった」はずです。' : ''; });
+function drawCat(g, W, H) {
+  g.fillStyle = '#fffefb'; g.fillRect(0, 0, W, H); g.fillStyle = '#1c1c1c';
+  g.beginPath(); g.ellipse(W * 0.47, H * 0.7, W * 0.2, H * 0.2, 0, 0, 7); g.fill();
+  g.beginPath(); g.arc(W * 0.33, H * 0.42, H * 0.13, 0, 7); g.fill();
+  g.beginPath(); g.moveTo(W * 0.25, H * 0.36); g.lineTo(W * 0.24, H * 0.18); g.lineTo(W * 0.32, H * 0.3); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(W * 0.36, H * 0.29); g.lineTo(W * 0.43, H * 0.17); g.lineTo(W * 0.43, H * 0.35); g.closePath(); g.fill();
+  g.lineWidth = H * 0.05; g.lineCap = 'round'; g.strokeStyle = '#1c1c1c'; g.beginPath(); g.moveTo(W * 0.64, H * 0.78); g.bezierCurveTo(W * 0.85, H * 0.8, W * 0.82, H * 0.45, W * 0.7, H * 0.4); g.stroke();
+  g.fillStyle = '#fffefb'; g.beginPath(); g.arc(W * 0.29, H * 0.41, H * 0.018, 0, 7); g.arc(W * 0.37, H * 0.41, H * 0.018, 0, 7); g.fill();
+}
+function drawBlur() {
+  const cv = $('#blurCv'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const src = newCanvas(W, H); drawCat(src.getContext('2d'), W, H);
+  const f = BLUR[blurLv]; const sm = newCanvas(W / f, H / f); sm.getContext('2d').drawImage(src, 0, 0, sm.width, sm.height);
+  g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H); g.drawImage(sm, 0, 0, W, H);
+  $('#blurStep').textContent = `はっきり度 ${blurLv + 1}/${BLUR.length}`;
+  $('#blurBtn').textContent = blurLv >= BLUR.length - 1 ? 'もう一度ぼかす' : '少しはっきりさせる';
+  $('#blurNote').textContent = blurLv >= BLUR.length - 1 ? '答えは「すわっているねこ」。ぼんやりしたかたちのときから、もう何かに「見立てて」いませんでしたか。' : '';
+}
+$('#blurBtn').addEventListener('click', () => { blurLv = blurLv >= BLUR.length - 1 ? 0 : blurLv + 1; drawBlur(); });
+function buildManga() {
+  const k1 = `<svg viewBox="0 0 90 120" aria-label="1コマ目：机の端のコップと、ねこの前足"><line x1="0" y1="78" x2="62" y2="78" stroke="#1c1c1c" stroke-width="2"/><line x1="8" y1="78" x2="8" y2="120" stroke="#1c1c1c" stroke-width="2"/><path d="M44 54 L60 54 L58 78 L46 78 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><path d="M60 60 q7 2 0 10" fill="none" stroke="#1c1c1c" stroke-width="2"/><circle cx="80" cy="46" r="12" fill="#1c1c1c"/><path d="M71 38 L72 26 L78 35 Z M82 34 L88 26 L89 38 Z" fill="#1c1c1c"/><ellipse cx="66" cy="62" rx="7" ry="4" fill="#1c1c1c"/><path d="M70 60 L80 54" stroke="#1c1c1c" stroke-width="5" stroke-linecap="round"/></svg>`;
+  const k2 = `<svg viewBox="0 0 90 120" aria-label="3コマ目：床に割れたコップと、知らんぷりのねこ"><line x1="0" y1="104" x2="90" y2="104" stroke="#1c1c1c" stroke-width="2"/><path d="M20 104 l6 -9 l5 9 Z M36 104 l3 -6 l7 4 Z M48 103 l8 -5 l2 6 Z M14 101 l-4 -4" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><circle cx="68" cy="56" r="11" fill="#1c1c1c"/><path d="M60 49 L61 38 L67 46 Z M70 45 L76 38 L77 50 Z" fill="#1c1c1c"/><ellipse cx="70" cy="84" rx="13" ry="18" fill="#1c1c1c"/><text x="40" y="30" font-size="12" fill="#1c1c1c">…</text></svg>`;
+  const mid = `<svg viewBox="0 0 90 120" aria-label="あいだのコマ：コップが落ちる"><line x1="0" y1="40" x2="40" y2="40" stroke="#1c1c1c" stroke-width="2"/><g transform="rotate(35 50 70)"><path d="M42 58 L58 58 L56 82 L44 82 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/></g><path d="M30 50 q-4 10 0 22 M24 56 q-3 8 0 16" stroke="#1c1c1c" fill="none"/><text x="8" y="112" font-size="15" font-weight="700" fill="#1c1c1c">ガシャーン</text></svg>`;
+  $('#manga').innerHTML = `<div class="koma">${k1}</div><button type="button" class="koma gap" id="mangaGap">ここで<br>何が？<br>（タップ）</button><div class="koma">${k2}</div>`;
+  $('#mangaGap').addEventListener('click', e => { const b = e.currentTarget; if (b.dataset.open) { buildManga(); $('#mangaNote').textContent = ''; return; } b.dataset.open = '1'; b.classList.remove('gap'); b.innerHTML = mid; $('#mangaNote').textContent = 'マンガでは、コマとコマの間の「描かれていない時間」を読者が補っています。描かないことで、読者の想像が動きだします。'; });
+}
+
+/* ---------- 描き込みスライダー ---------- */
+const brushPine = makePine(4242);
+let brushRaf = 0, brushUnsub = null;
+function drawBrush() {
+  brushRaf = 0;
+  const cv = $('#brushCv'), r = cv.getBoundingClientRect(); if (r.width < 2) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = '#fffefb'; g.fillRect(0, 0, r.width, r.height);
+  const d = +$('#brushRange').value / 100, P = brushPine;
+  const S = Math.min((r.height - 40) / (-P.top + 0.06), (r.width - 20) / (P.maxX - P.minX + 0.06));
+  const ox = r.width / 2 - (P.minX + P.maxX) / 2 * S, oy = r.height - 14;
+  drawPine(g, P, d, S, ox, oy, { ground: true });
+  $('#brushOut').textContent = Math.round(d * 100);
+  $('#brushCap').textContent = d < 0.3 ? '北宋画のように：針葉を一本ずつ描き込む' : d < 0.68 ? '南宋画のように：「精緻」と「朦朧」が交錯する' : '等伯・破墨のように：荒くすばやい筆の打ち込み';
+}
+function brushMine() { $('#brushMine').textContent = Store.d.brushVote == null ? '' : `あなたの投票：${Store.d.brushVote}`; }
+Screens.brush = {
+  title: '描き込みスライダー',
+  enter() {
+    if (Store.d.brushVote != null && !this.touched) $('#brushRange').value = Store.d.brushVote;
+    requestAnimationFrame(drawBrush); brushMine(); updateShareNotes();
+    renderHist($('#brushHist'), null, Store.d.brushVote);
+    brushUnsub = Share.subscribe(s => { if (s.ok) renderHist($('#brushHist'), s.votes && s.votes.brush, Store.d.brushVote); });
+  },
+  leave() { brushUnsub && brushUnsub(); brushUnsub = null; },
+  resize() { drawBrush(); },
+};
+$('#brushRange').addEventListener('input', () => { Screens.brush.touched = true; if (!brushRaf) brushRaf = requestAnimationFrame(drawBrush); });
+$('#brushVote').addEventListener('click', async e => {
+  const v = +$('#brushRange').value, b = e.currentTarget; b.disabled = true;
+  const r = await Share.vote('brush', v); b.disabled = false;
+  if (r.ok) { Store.set('brushVote', v); brushMine(); $('#brushMine').textContent += '（記録しました）'; }
+  else $('#brushMine').textContent = errMsg(r.error);
+});
+
+/* ---------- 霧の松林 ---------- */
+let forest = null, forestUnsub = null;
+function setMist(v) { $('#mistOut').textContent = v; if (forest) forest.mist = v / 100; $('#overBadge').hidden = v > 6; }
+Screens.forest = {
+  title: '霧の松林をあるく',
+  enter() {
+    if (!forest) forest = new Forest($('#forestCv'), { mist: 0.7, onMove: v => Sound.move(v) });
+    setMist(+$('#mistRange').value);
+    requestAnimationFrame(() => { forest.resize(); forest.start(); });
+    $('#mistMine').textContent = Store.d.mistBest == null ? '' : `あなたの記録：${Store.d.mistBest}`;
+    if (Store.d.sound) Sound.set(true);
+    this.syncSound(); updateShareNotes();
+    renderHist($('#mistHist'), null, Store.d.mistBest);
+    forestUnsub = Share.subscribe(s => { if (s.ok) renderHist($('#mistHist'), s.votes && s.votes.mist, Store.d.mistBest); });
+  },
+  leave() { forest && forest.stop(); Sound.set(false); forestUnsub && forestUnsub(); forestUnsub = null; },
+  resize() { forest && forest.resize(); },
+  syncSound() { const on = Sound.on; $('#soundBtn').setAttribute('aria-pressed', String(on)); $('#soundBtn').textContent = on ? '松風 オン' : '松風 オフ'; },
+};
+$('#mistRange').addEventListener('input', e => setMist(+e.target.value));
+$('#soundBtn').addEventListener('click', () => { const on = !Sound.on; Sound.set(on); Store.set('sound', on && Sound.on); Screens.forest.syncSound(); });
+$('#autoBtn').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); forest.auto = on ? 0.28 : 0; });
+for (const [id, dir] of [['#walkF', 1], ['#walkB', -1]]) {
+  const b = $(id);
+  b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} if (forest) forest.push = dir; });
+  const off = () => { if (forest) forest.push = 0; };
+  b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+  b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (forest) forest.camZ += dir * 0.6; } });
+}
+document.addEventListener('keydown', e => { if (current !== 'forest' || !forest || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.key === 'ArrowUp') { forest.vel = 1; e.preventDefault(); } if (e.key === 'ArrowDown') { forest.vel = -1; e.preventDefault(); } });
+$('#mistRec').addEventListener('click', async e => {
+  const v = +$('#mistRange').value, b = e.currentTarget; b.disabled = true;
+  const r = await Share.vote('mist', v); b.disabled = false;
+  if (r.ok) { Store.set('mistBest', v); $('#mistMine').textContent = `あなたの記録：${v}（記録しました）`; }
+  else $('#mistMine').textContent = errMsg(r.error);
+});
+
+/* ---------- 白の向こうに書く ---------- */
+let writeForest = null, writeUnsub = null, tapPos = null;
+function wordsFrom(s, f) {
+  const posts = (s && s.posts) || [];
+  const prev = new Map((f.words || []).map(w => [w.id, w]));
+  f.words = posts.map(p => prev.get(p.id) || { id: p.id, text: p.text, x: +p.x, y: +p.y, start: null });
+}
+function renderMyPosts() { $('#myPosts').innerHTML = Store.d.myPosts.length ? Store.d.myPosts.map(p => `<li>${esc(p.text)}</li>`).join('') : '<li class="note">まだありません</li>'; }
+Screens.write = {
+  title: '白の向こうに書く',
+  enter() {
+    if (!writeForest) writeForest = new Forest($('#writeCv'), { mist: 0.78, walk: false, seed: 17, onTap: onWriteTap });
+    writeForest.wordOpt = { size: Store.d.lesson ? 22 : 16, max: 8 };
+    requestAnimationFrame(() => { writeForest.resize(); writeForest.start(); });
+    renderMyPosts(); updateShareNotes();
+    writeUnsub = Share.subscribe(s => {
+      if (!s.ok) { $$('[data-share-note]').forEach(e => e.textContent = '共有：' + errMsg(s.error)); return; }
+      updateShareNotes(); $('#writeClosed').hidden = s.open !== false; wordsFrom(s, writeForest);
+    });
+  },
+  leave() { writeForest && writeForest.stop(); writeUnsub && writeUnsub(); writeUnsub = null; closeSheet(); },
+  resize() { writeForest && writeForest.resize(); },
+};
+function onWriteTap(x, y) {
+  const f = writeForest;
+  if (!f.isWhite(x, y)) { showTapMsg('松のないところ（白い霧）をタップしてね'); return; }
+  tapPos = { x: x / f.W, y: y / f.H };
+  const m = $('#tapMark'); m.style.left = x + 'px'; m.style.top = y + 'px'; m.hidden = false;
+  $('#writeForm').hidden = false; $('#writeMsg').textContent = ''; $('#writeMsg').className = 'msg';
+  const inp = $('#writeText'); inp.value = ''; $('#writeCount').textContent = '0/30';
+  setTimeout(() => inp.focus(), 30);
+}
+let tapMsgT = null;
+function showTapMsg(t) { const c = $('#writeClosed'); c.textContent = t; c.hidden = false; clearTimeout(tapMsgT); tapMsgT = setTimeout(() => { c.textContent = 'いまは受付を停止しています'; c.hidden = !(Share.last && Share.last.open === false); }, 1800); }
+function closeSheet() { $('#writeForm').hidden = true; $('#tapMark').hidden = true; tapPos = null; }
+$('#writeCancel').addEventListener('click', closeSheet);
+$('#writeText').addEventListener('input', e => { $('#writeCount').textContent = `${Array.from(e.target.value).length}/30`; });
+$('#writeForm').addEventListener('submit', async e => {
+  e.preventDefault(); if (!tapPos) return;
+  const btn = e.submitter || $('#writeForm button[type=submit]'); btn.disabled = true;
+  const r = await Share.post($('#writeText').value, tapPos.x, tapPos.y); btn.disabled = false;
+  const msg = $('#writeMsg');
+  if (!r.ok) { msg.textContent = errMsg(r.error); msg.className = 'msg err'; return; }
+  const p = r.post; writeForest.words = (writeForest.words || []).concat([{ id: p.id, text: p.text, x: +p.x, y: +p.y, start: writeForest.time }]);
+  renderMyPosts(); closeSheet();
+});
+
+/* ---------- 投影モード ---------- */
+let projForest = null, projUnsub = null;
+Screens.proj = {
+  title: '投影モード',
+  enter() {
+    if (!projForest) projForest = new Forest($('#projCv'), { mist: 0.74, walk: true, auto: 0.12, seed: 23 });
+    requestAnimationFrame(() => { projForest.resize(); this.fit(); projForest.start(); });
+    projUnsub = Share.subscribe(s => {
+      if (!s.ok) { $('#projInfo').textContent = errMsg(s.error); return; }
+      wordsFrom(s, projForest);
+      $('#projInfo').textContent = `白の向こうに ── ${Share.mode === 'gas' ? 'クラス ' + Share.cls : '端末内'}・${(s.posts || []).length}の言葉${s.open === false ? '（受付停止中）' : ''}`;
+      renderHist($('#projBrushHist'), s.votes && s.votes.brush); renderHist($('#projMistHist'), s.votes && s.votes.mist);
+    });
+  },
+  fit() { if (projForest) projForest.wordOpt = { size: clamp(Math.round(projForest.W / 30), 20, 52), max: 12 }; },
+  leave() { projForest && projForest.stop(); projUnsub && projUnsub(); projUnsub = null; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); },
+  resize() { projForest && projForest.resize(); this.fit(); },
+};
+$('#projHistBtn').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); $('#projHistBox').hidden = !on; });
+$('#projWalk').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); projForest.auto = on ? 0.12 : 0; });
+$('#projFull').addEventListener('click', () => { const el = document.documentElement; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); });
+
+/* ---------- 振り返り ---------- */
+function buildReport() {
+  const ps = sum(Store.d.pre), qs = sum(Store.d.post), d = new Date();
+  const ty = s => s == null ? '未回答' : `${s}点（${typeOf(s).name}）`;
+  const bv = Store.d.brushVote;
+  const lines = [
+    `『空白の意味』振り返り（${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}）`,
+    `クラスコード：${Share.cls || '―'}`,
+    `空白うめたい度：前 ${ty(ps)} → 後 ${ty(qs)}`,
+    `  後の回答：${Store.d.post ? Store.d.post.join(' / ') : '―'}`,
+    `靄スライダー：いちばん広く深く感じた濃さ ${Store.d.mistBest ?? '―'}`,
+    `描き込みスライダー：いちばん松らしい位置 ${bv ?? '―'}${bv == null ? '' : bv < 30 ? '（精緻寄り）' : bv < 68 ? '（精緻と朦朧のあいだ）' : '（荒い筆寄り）'}`,
+    '白の向こうに書いた言葉：',
+    ...(Store.d.myPosts.length ? Store.d.myPosts.map(p => '・' + p.text) : ['・（なし）']),
+    'ことばにしよう：',
+    Store.d.reflection || '（未記入）',
+  ];
+  return lines.join('\n');
+}
+Screens.reflect = {
+  title: '振り返り',
+  enter() {
+    const done = !!Store.d.post;
+    $('#rfCheck').innerHTML = done ? `<p style="margin:0">うめたい度（後）：回答ずみ <a href="#/check/post">答え直す</a></p>` : `<p style="margin:0 0 8px">まず、もう一度うめたい度チェックに答えよう。</p><a class="btn primary" href="#/check/post">うめたい度チェック（後）</a>`;
+    renderKake($('#rfKake'), Store.d.pre, Store.d.post);
+    $('#rfText').value = Store.d.reflection || '';
+    $('#rfOut').value = buildReport();
+  },
+};
+$('#rfText').addEventListener('input', e => { Store.set('reflection', e.target.value); $('#rfOut').value = buildReport(); });
+$('#rfCopy').addEventListener('click', async () => {
+  const t = buildReport(), out = $('#rfOut'); out.value = t; let ok = false;
+  try { await navigator.clipboard.writeText(t); ok = true; } catch (e) { try { out.focus(); out.select(); ok = document.execCommand('copy'); } catch (_) {} }
+  $('#rfMsg').textContent = ok ? 'コピーしました' : '自動でコピーできませんでした。上の枠を長押しして選択・コピーしてください。';
+});
+
+/* ---------- 屏風（準備中） ---------- */
+Screens.byobu = { title: '屏風モード' };
+
+/* ---------- 教員用 ---------- */
+let tPin = ''; try { tPin = sessionStorage.getItem('kuuhaku.pin') || ''; } catch (e) {}
+function studentLink() { const u = new URL(location.href); u.hash = ''; u.search = ''; if (Share.cls) u.searchParams.set('class', Share.cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString(); }
+function tRefreshCfg() { $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
+function tRender(r) {
+  $('#tPanel').hidden = false; $('#tOpen').textContent = r.open === false ? '停止中' : '受付中';
+  const posts = r.posts || []; $('#tCount').textContent = posts.length;
+  $('#tPosts').innerHTML = posts.length ? posts.slice().reverse().map(p => `<li class="${p.hidden ? 'hid' : ''}"><span>${esc(p.text)}</span><small>${new Date(+p.t).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</small><button class="btn" data-id="${esc(p.id)}" data-op="${p.hidden ? 'unhide' : 'hide'}">${p.hidden ? '再表示' : '非表示'}</button></li>`).join('') : '<li class="note">まだ投稿はありません</li>';
+}
+async function tDo(op, extra) {
+  const r = await Share.admin(op, extra, tPin);
+  const m = $('#tMsg');
+  if (!r.ok) { m.textContent = errMsg(r.error); m.className = 'msg err'; if (r.error === 'pin') { $('#tPanel').hidden = true; tPin = ''; try { sessionStorage.removeItem('kuuhaku.pin'); } catch (e) {} } return null; }
+  m.textContent = Share.mode === 'gas' ? '' : '端末内モード：この端末の記録だけを操作しています。'; m.className = 'msg';
+  if (op !== 'list') return tDo('list');
+  tRender(r); return r;
+}
+Screens.teacher = {
+  title: '教員用',
+  enter() { tRefreshCfg(); $('#tPin').value = tPin; if (Share.mode === 'local' || tPin) tDo('list'); },
+};
+$('#tLogin').addEventListener('click', () => {
+  const c = $('#tClass').value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 16); Store.set('classCode', c); Share.last = null;
+  tPin = $('#tPin').value.trim(); try { sessionStorage.setItem('kuuhaku.pin', tPin); } catch (e) {}
+  tRefreshCfg(); tDo('list');
+});
+$('#tPosts').addEventListener('click', e => { const b = e.target.closest('button[data-op]'); if (b) tDo(b.dataset.op, { id: b.dataset.id }); });
+$('#tOpenBtn').addEventListener('click', () => tDo('open'));
+$('#tCloseBtn').addEventListener('click', () => tDo('close'));
+$('#tReload').addEventListener('click', () => tDo('list'));
+$('#tClear').addEventListener('click', () => { if (confirm(`クラス ${Share.cls || '（端末内）'} の投稿をすべて消します。よろしいですか？`)) tDo('clear'); });
+$('#tClearVotes').addEventListener('click', () => { if (confirm('描き込み・靄の投票をすべてリセットします。よろしいですか？')) tDo('clearVotes'); });
+function validGas(u) { return u === '' || /^https:\/\/script\.google(usercontent)?\.com\/[\w\-\/.?=&%]+$/.test(u); }
+$('#tGasSave').addEventListener('click', () => {
+  const u = $('#tGas').value.trim(); const m = $('#tGasMsg');
+  if (!validGas(u)) { m.textContent = 'https://script.google.com/ で始まる URL を入れてください。'; m.className = 'msg err'; return; }
+  Store.set('gasUrl', u); Share.last = null; m.textContent = u ? '保存しました。「接続を確かめる」で確認できます。' : '端末内のみにしました。'; m.className = 'msg'; tRefreshCfg();
+});
+$('#tPing').addEventListener('click', async () => {
+  const m = $('#tGasMsg'); if (Share.mode !== 'gas') { m.textContent = 'GAS の URL が設定されていません。'; return; }
+  m.textContent = '確かめています…'; const r = await Share.req({ action: 'ping' });
+  m.textContent = r.ok ? `つながりました（版 ${r.version}）` : errMsg(r.error); m.className = r.ok ? 'msg' : 'msg err';
+});
+$('#tLinkCopy').addEventListener('click', async () => { const t = $('#tLink').value; try { await navigator.clipboard.writeText(t); $('#tGasMsg').textContent = 'リンクをコピーしました'; } catch (e) { $('#tLink').select(); document.execCommand('copy'); } });
+
+/* =========================================================
+   起動：URL の ?class= ?gas= ?lesson= を取り込む
+   ========================================================= */
+(function boot() {
+  const p = new URLSearchParams(location.search); let changed = false;
+  if (p.has('class')) { Store.d.classCode = p.get('class').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 16); changed = true; }
+  if (p.has('gas') && validGas(p.get('gas').trim())) { Store.d.gasUrl = p.get('gas').trim(); changed = true; }
+  if (p.has('lesson')) { Store.d.lesson = p.get('lesson') === '1'; changed = true; }
+  if (changed) { Store.save(); const keep = p.get('q'); try { history.replaceState(null, '', location.pathname + (keep ? '?q=' + keep : '') + location.hash); } catch (e) {} }
+  applyLesson(); route();
+})();
+</script>
+</body>
+</html>

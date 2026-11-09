@@ -1,0 +1,11 @@
+{
+  "name": "kuuhaku",
+  "private": true,
+  "description": "『空白の意味』で使う、松林図を体感するデジタル教材（index.html 一枚・ビルド不要）",
+  "scripts": {
+    "test": "node tests/gas.test.js && node tests/e2e.js",
+    "test:gas": "node tests/gas.test.js",
+    "test:e2e": "node tests/e2e.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
