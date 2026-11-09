@@ -36,8 +36,9 @@ jobs:
           enablement: true
       - name: 公開するファイルをまとめる
         run: |
-          mkdir -p _site/docs _site/gas
+          mkdir -p _site/docs _site/gas _site/assets
           cp index.html .nojekyll _site/
+          cp assets/* _site/assets/
           cp docs/*.md _site/docs/
           cp gas/Code.gs _site/gas/
       - uses: actions/upload-pages-artifact@v3

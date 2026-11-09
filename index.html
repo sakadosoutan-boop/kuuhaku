@@ -205,6 +205,19 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
 .hist5 .bar.mine i{background:var(--ink);outline:2px solid var(--ink);outline-offset:1px}
 .hist5 .bar b{position:absolute;left:0;right:0;text-align:center;font-size:.72rem;font-weight:400;color:var(--sumi);bottom:calc(var(--h) + 2px)}
 .labsum ul{margin:.3rem 0;padding-left:1.2em}
+.stage.real{touch-action:auto;background:#3a3533}
+.realtrack{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-x pan-y}
+.realrow{display:flex;height:calc(100% * var(--z,1));width:max-content;gap:10px;padding:0 10px}
+.realrow figure{position:relative;margin:0;height:100%;flex:none}
+.realrow img{height:100%;width:auto;display:block;user-select:none;-webkit-user-drag:none}
+.realrow figcaption{position:absolute;left:8px;top:6px;font-size:.75rem;color:#fff;background:rgba(0,0,0,.55);padding:0 8px;border-radius:4px}
+.hs{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;opacity:.92;border-radius:50%;border:2px solid #fff;background:rgba(122,43,34,.85);color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4);touch-action:manipulation}
+.hs[aria-pressed=true]{background:#fff;color:#7a2b22;border-color:#7a2b22}
+.real.nohs .hs{display:none}
+.realzoom{position:absolute;right:8px;bottom:8px;display:flex;gap:6px;z-index:2}
+.realmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;text-align:center;padding:16px}
+.realmsg[hidden]{display:none}
+.credit{font-size:.78rem;color:var(--sumi);line-height:1.5}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion:reduce){.tapmark{animation:none}}
 </style>
@@ -250,6 +263,7 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
     <li><a href="#/lab"><span class="n">1</span><b>補完ラボ（5分）</b><small>見えない三角形・半分隠した絵・ぼかし絵・マンガの2コマ</small></a></li>
     <li><a href="#/brush"><span class="n">2</span><b>描き込みスライダー（10分）</b><small>北宋画の精緻 ⇔ 等伯の荒い筆。いちばん松らしいのは？</small></a></li>
     <li><a href="#/forest"><span class="n">3</span><b>霧の松林をあるく・靄スライダー（15分）</b><small>霧の奥へ進む。霧を晴らすと何が起こる？</small></a></li>
+    <li><a href="#/real"><span class="n">実</span><b>実物を見る（いつでも）</b><small>本物の松林図屏風を拡大して、教材の絵と見比べる</small></a></li>
     <li><a href="#/write"><span class="n">4</span><b>白の向こうに書く（10分）</b><small>白い霧をタップして、そこにあるものを一行で</small></a></li>
     <li><a href="#/reflect"><span class="n">5</span><b>振り返り（5分）</b><small>うめたい度（後）・掛け軸の目盛り・記録をコピー</small></a></li>
     <li><a href="#/byobu" class="later"><span class="n">屏</span><b>屏風モード（準備中）</b><small>六曲一双を折れた画面で見る（第3段階）</small></a></li>
@@ -257,7 +271,7 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
 
   <div class="card">
     <h3 style="margin-top:0">実物と見比べよう</h3>
-    <p class="note">この教材の松・霧・霊峰は、松林図をもとに筆の打ち込みを重ねてプログラムで描いた<strong>独自の水墨風の絵</strong>で、実物の画像ではありません。実物は、教科書 p.146〜147 の図版と、東京国立博物館の公式ページで見比べてください。</p>
+    <p class="note">霧の松林・描き込みスライダーの松・霧・霊峰は、松林図をもとに筆の打ち込みを重ねてプログラムで描いた<strong>独自の水墨風の絵</strong>です。本物は「<a href="#/real">実物を見る</a>」（ColBase の公開画像）と、教科書 p.146〜147 の図版で見比べてください。</p>
     <ul class="note">
       <li><a href="https://www.tnm.jp/modules/r_collection/index.php?controller=dtl&amp;colid=A10471" target="_blank" rel="noopener">東京国立博物館「松林図屏風」（名品ギャラリー）</a></li>
       <li><a href="https://colbase.nich.go.jp/collection_items/tnm/A-10471" target="_blank" rel="noopener">ColBase（国立文化財機構所蔵品統合検索システム）</a></li>
@@ -343,7 +357,7 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
       <div class="hist" id="brushHist"></div>
       <div class="hist-labels"><span>精緻</span><span>荒い</span></div>
       <p class="share-note" data-share-note></p>
-      <details class="think"><summary>考えよう</summary><p>針葉を一本ずつ描いた松と、数本の打ち込みだけの松。見る側の頭の中でしている仕事は、どう違うだろう。</p></details>
+      <details class="think"><summary>考えよう</summary><p>針葉を一本ずつ描いた松と、数本の打ち込みだけの松。見る側の頭の中でしている仕事は、どう違うだろう。投票のあとで「<a href="#/real">実物を見る</a>」の②の松と比べてみよう。</p></details>
     </div>
   </div>
 </section>
@@ -382,6 +396,27 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
       <details class="think"><summary>考えよう</summary><p>靄 0 の「説明しすぎの絵」と、霧の濃い絵。広く深く感じるのはどちらか。本文 150・4「空白地帯を情報のゼロ地帯とは見なさない」とつなげて考えよう。左上の霊峰には、どこまで歩けば近づけるだろう。</p></details>
     </div>
   </div>
+</section>
+
+<!-- ============ 実物を見る ============ -->
+<section id="s-real" class="screen">
+  <div class="passage"><span class="ref">149・7／149・16／150・1</span>
+    <p>（要旨）描いているのは松の木より、松の木々の間の空間。左隻右上の霊峰は白の中の白。何もない空白に、細密な描写以上の豊かなイマジネーションを見立てる。</p></div>
+  <p class="q">教材の霧と、本物の余白。どこが同じで、どこが違うだろう。</p>
+  <div class="stage real" id="realStage">
+    <div class="realtrack" id="realTrack" tabindex="0" aria-label="松林図屏風。横にスクロールして見る">
+      <div class="realrow" id="realRow">
+        <figure data-side="left"><img id="realL" alt="松林図屏風 左隻（長谷川等伯筆、東京国立博物館蔵）" width="2349" height="1100" decoding="async"><figcaption>左隻</figcaption></figure>
+        <figure data-side="right"><img id="realR" alt="松林図屏風 右隻（長谷川等伯筆、東京国立博物館蔵）" width="2347" height="1100" decoding="async"><figcaption>右隻</figcaption></figure>
+      </div>
+    </div>
+    <div class="realmsg" id="realMsg" hidden></div>
+    <div class="realzoom"><button class="pad small" id="realOut" aria-label="縮小">－</button><button class="pad small" id="realIn" aria-label="拡大">＋</button></div>
+  </div>
+  <div class="row"><button class="chip" id="realHs" aria-pressed="true">見どころの印</button><span class="note">横にスクロール／＋で拡大。番号をタップすると見どころが出ます。</span></div>
+  <div class="card" id="realNote" aria-live="polite"><p class="note" style="margin:0">番号の印をタップしてみよう。右隻（右）から左隻（左）へ、右から左に見ていくのが屏風の見方です。</p></div>
+  <details class="think"><summary>考えよう</summary><p>教材の「霧の松林」で靄を 0 にしたときの絵と、本物の白い余白を比べよう。本物の白は、何もない白だろうか。左隻の右上の霊峰は、いつ気づいた？</p></details>
+  <p class="credit">出典：<a href="https://colbase.nich.go.jp/collection_items/tnm/A-10471" target="_blank" rel="noopener">ColBase（国立文化財機構所蔵品統合検索システム）「松林図屏風」</a>　長谷川等伯筆／東京国立博物館蔵／国宝。<br>ColBase の画像を縮小して掲載し、見どころの印を加えています（この教材による加工）。</p>
 </section>
 
 <!-- ============ 白の向こうに書く ============ -->
@@ -1590,13 +1625,64 @@ $$('#setDlg [data-pref]').forEach(i => i.addEventListener('change', () => {
 $('#qSel').addEventListener('click', e => { const b = e.target.closest('button[data-q]'); if (!b) return; const v = b.dataset.q === 'auto' ? 'auto' : +b.dataset.q; if (v === Store.d.quality) return; Store.set('quality', v); location.reload(); });
 $('#setFull').addEventListener('click', () => { const el = document.documentElement; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); });
 
+/* ---------- 実物を見る（ColBase の画像） ---------- */
+const REAL_HS = [
+  { side: 'right', x: 0.885, y: 0.36, t: '右隻のいちばん右から見はじめよう。傾いた松が、風に揺れているように見える。' },
+  { side: 'right', x: 0.39, y: 0.30, t: '近くの松は濃い墨で、すばやく打ち込まれている。針葉は一本ずつ描かれていない（148・12）。描き込みスライダーのどのあたりに近い？' },
+  { side: 'right', x: 0.38, y: 0.86, t: '根元は数本の荒い線だけ。地面は描かれていないのに、松が立つ場所が感じられる。' },
+  { side: 'right', x: 0.58, y: 0.52, t: '何も描かれていない白。それでも、霧の向こうに松が続いているように見えないだろうか（149・7）。' },
+  { side: 'left', x: 0.60, y: 0.62, t: '幹が途中から霧に消えている。描かれていない部分を、見ている側が補っている（149・2）。' },
+  { side: 'left', x: 0.75, y: 0.17, t: '淡い墨の松は遠くに見える。墨の濃さのちがいだけで、奥行きが生まれている。' },
+  { side: 'left', x: 0.905, y: 0.32, t: '印のすぐ上を見よう。白の中にうっすらと山の線がある。これが霊峰、「白の中の白」（149・16）。見つけられた？' },
+  { side: 'left', x: 0.10, y: 0.50, t: '左端の一扇は、ほとんど白。この余白があることで、画面全体はどう感じられる？（150・1）' },
+];
+let realZ = 1, realInit = false;
+function realZoom(z, keepCenter = true) {
+  const tr = $('#realTrack'), cx = (tr.scrollLeft + tr.clientWidth / 2) / (tr.scrollWidth || 1), cy = (tr.scrollTop + tr.clientHeight / 2) / (tr.scrollHeight || 1);
+  realZ = clamp(z, 1, 4); $('#realRow').style.setProperty('--z', realZ);
+  if (keepCenter) { tr.scrollLeft = cx * tr.scrollWidth - tr.clientWidth / 2; tr.scrollTop = cy * tr.scrollHeight - tr.clientHeight / 2; }
+  $('#realOut').disabled = realZ <= 1; $('#realIn').disabled = realZ >= 4;
+}
+Screens.real = {
+  title: '実物を見る',
+  enter() {
+    if (!realInit) {
+      realInit = true;
+      const msg = $('#realMsg'); let failed = 0;
+      for (const [id, src] of [['#realL', 'assets/shorinzu-left.jpg'], ['#realR', 'assets/shorinzu-right.jpg']]) {
+        const im = $(id);
+        im.addEventListener('error', () => { if (++failed === 1) { msg.hidden = false; msg.innerHTML = '画像を読み込めませんでした（オフラインかもしれません）。<br>教科書 p.146〜147 の図版か、ColBase の公式ページで見てください。'; } });
+        im.addEventListener('load', () => { if (id === '#realR') { const tr = $('#realTrack'); tr.scrollLeft = tr.scrollWidth; } });
+        im.src = src;
+      }
+      for (const [i, h] of REAL_HS.entries()) {
+        const b = document.createElement('button'); b.className = 'hs'; b.type = 'button'; b.textContent = i + 1; b.dataset.i = i;
+        b.style.left = (h.x * 100) + '%'; b.style.top = (h.y * 100) + '%'; b.setAttribute('aria-label', `見どころ ${i + 1}`); b.setAttribute('aria-pressed', 'false');
+        $(`#realRow figure[data-side="${h.side}"]`).appendChild(b);
+      }
+    }
+    realZoom(realZ, false);
+    requestAnimationFrame(() => { const tr = $('#realTrack'); if (tr.scrollLeft === 0) tr.scrollLeft = tr.scrollWidth; });
+  },
+};
+$('#realRow').addEventListener('click', e => {
+  const b = e.target.closest('.hs'); if (!b) return;
+  $$('#realRow .hs').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  const h = REAL_HS[+b.dataset.i];
+  $('#realNote').innerHTML = `<p style="margin:0"><b>${+b.dataset.i + 1}（${h.side === 'right' ? '右隻' : '左隻'}）</b>　${esc(h.t)}</p>`;
+});
+$('#realIn').addEventListener('click', () => realZoom(realZ * 1.6));
+$('#realOut').addEventListener('click', () => realZoom(realZ / 1.6));
+$('#realHs').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); $('#realStage').classList.toggle('nohs', !on); });
+$('#realTrack').addEventListener('dblclick', () => realZoom(realZ >= 3.9 ? 1 : realZ * 1.6));
+
 /* ---------- 屏風（準備中） ---------- */
 Screens.byobu = { title: '屏風モード' };
 
 /* ---------- 教員用 ---------- */
 let tPin = ''; try { tPin = sessionStorage.getItem('kuuhaku.pin') || ''; } catch (e) {}
 function studentLink() { const u = new URL(location.href); u.hash = ''; u.search = ''; if (Share.cls) u.searchParams.set('class', Share.cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString(); }
-const SCENES = [['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
+const SCENES = [['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['real', '実物を見る'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
 function renderLinks() { $('#tLinks').innerHTML = SCENES.map(([h, n]) => `<li><span>${n}</span><button class="btn" data-link="${esc(studentLink())}#/${h}">コピー</button></li>`).join(''); }
 $('#tLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { prompt('このリンクをコピーしてください', b.dataset.link); } setTimeout(() => { b.textContent = 'コピー'; }, 1500); });
 function tRefreshCfg() { renderLinks(); $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }

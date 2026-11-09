@@ -104,6 +104,17 @@ async function localFlow(browser, base, vp, name) {
     console.log(`     平均フレーム時間 ${ft.toFixed(1)}ms（ヘッドレス・品質 ${await page.evaluate(() => Q.level)}）`);
   });
 
+  await step('実物を見る（ColBase の画像・見どころ・拡大）', async () => {
+    await page.goto(base + '#/real'); await page.waitForFunction(() => document.querySelector('#realR').naturalWidth > 0 && document.querySelector('#realL').naturalWidth > 0);
+    assert.ok(await page.evaluate(() => { const t = document.querySelector('#realTrack'); return t.scrollLeft > 0; }), '右隻から始まっていない');
+    await page.click('#realRow figure[data-side=right] .hs >> nth=0'); assert.match(await page.textContent('#realNote'), /右隻/);
+    const w0 = await page.evaluate(() => document.querySelector('#realR').getBoundingClientRect().width);
+    await page.click('#realIn'); const w1 = await page.evaluate(() => document.querySelector('#realR').getBoundingClientRect().width); assert.ok(w1 > w0 * 1.4, '拡大できない');
+    await page.click('#realOut'); await page.click('#realHs'); assert.ok(await page.isHidden('#realRow .hs >> nth=0'));
+    assert.match(await page.textContent('#s-real .credit'), /出典：ColBase/);
+    await page.shot('17-real');
+  });
+
   await step('白の向こうに書く', async () => {
     await page.goto(base + '#/write'); await page.waitForTimeout(900);
     const p = await findWhite(page); assert.ok(p, '白い所が見つからない');
@@ -136,7 +147,7 @@ async function localFlow(browser, base, vp, name) {
     assert.ok(await page.locator('#tPosts li.hid').count() === 1);
     const st = await page.evaluate(() => Share.state()); assert.strictEqual(st.posts.length, 0);
     await page.click('#tPosts button[data-op=unhide]'); await page.waitForTimeout(200);
-    assert.strictEqual(await page.locator('#tLinks li').count(), 7);
+    assert.strictEqual(await page.locator('#tLinks li').count(), 8);
     assert.match(await page.getAttribute('#tLinks li:nth-child(2) button', 'data-link'), /#\/brush$/);
     await page.shot('12-teacher');
   });
