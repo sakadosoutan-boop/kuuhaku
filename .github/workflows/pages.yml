@@ -1,0 +1,48 @@
+name: GitHub Pages に公開
+
+# 既定のブランチに push すると、リポジトリ全体を GitHub Pages に公開する。
+# configure-pages の enablement で、Pages が未設定なら有効化を試みる（ソース＝GitHub Actions）。
+# 有効化に失敗したときは README「A. 教材を公開する」の手順で Source を「GitHub Actions」にする。
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: GAS API のテスト（壊れた版を公開しない）
+        run: node tests/gas.test.js
+      - name: Pages の設定（未設定なら有効化）
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: 公開するファイルをまとめる
+        run: |
+          mkdir -p _site/docs _site/gas
+          cp index.html .nojekyll _site/
+          cp docs/*.md _site/docs/
+          cp gas/Code.gs _site/gas/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: 公開
+        id: deployment
+        uses: actions/deploy-pages@v4

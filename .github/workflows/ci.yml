@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: GAS API（モック）
+        run: node tests/gas.test.js
+      - name: 日本語フォント
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+      - name: Playwright と Chromium
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: スマホ・Chromebook の煙テスト（端末内／GAS モック）
+        run: node tests/e2e.js
+      - name: スクリーンショット
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: tests/screenshots/
+          if-no-files-found: warn
+          retention-days: 14
