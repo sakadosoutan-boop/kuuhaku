@@ -21,6 +21,8 @@
 
 Playwright はインストール済みの Chromium を使う（`playwright install` はしない）。変更後は両方を通す。
 
+画面の切り替えは霧をはさんで約0.2秒遅れる。テストでは `#s-◯◯.on` を待つ（`tests/e2e.js` の `open()`）。
+
 ## 公開
 
 - 既定のブランチへの push で `.github/workflows/pages.yml` が GitHub Pages に公開する。
