@@ -272,7 +272,7 @@ body.lesson .q{font-size:1.25rem}
 
 /* ---- 舞台 ---- */
 .stage{border:none;border-radius:var(--r);box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),var(--shadow);background:#f7f6f2}
-.xp .stage{height:clamp(250px,calc(100dvh - 392px),920px);min-height:0}
+.xp .stage{height:clamp(240px,calc(100dvh - 412px),920px);min-height:0}
 .xp.slim .stage{height:clamp(280px,calc(100dvh - 262px),920px)}
 .hud .chip,.badge{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .hint{font-size:.72rem;letter-spacing:.04em}
@@ -965,7 +965,7 @@ const Sprites = {
   ensure() {
     if (this.rough.length) return;
     const n = [5, 6, 8][Q.level];
-    for (let i = 0; i < n; i++) this.rough.push(makeSprite(PINES[i], 0.86, Q.spriteH));
+    for (let i = 0; i < n; i++) this.rough.push(makeSprite(PINES[i], 0.93, Q.spriteH));
     this.peak = makePeak(); this.mist = makeMist();
   },
   ensureFine() {
@@ -1155,7 +1155,7 @@ class Forest {
         continue;
       }
       const p = it.p;
-      let a = Math.exp(-k * Math.max(0, dz - 0.5)) * smooth(0.32, 1.05, dz) * smooth(this.far + 0.4, this.far - 1.2, dz);
+      let a = Math.min(1, 1.18 * Math.exp(-k * Math.max(0, dz - 0.9))) * smooth(0.32, 1.05, dz) * smooth(this.far + 0.4, this.far - 1.2, dz);
       if (a < 0.012) continue;
       const sx = W / 2 + (p.x - (this.camX || 0)) * s, sy = this.hz + this.eye * s;
       const sp = Sprites.rough[p.v % Sprites.rough.length], hpx = p.hs * s, sc = hpx / sp.S, dw = sp.w * sc, dh = sp.h * sc;
