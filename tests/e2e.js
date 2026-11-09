@@ -32,7 +32,7 @@ async function newPage(browser, vp, name, extra = {}) {
   if (!noSensors) await ctx.grantPermissions(['accelerometer', 'gyroscope', 'magnetometer']).catch(() => {}); // 屏風モードの「傾きで見る」
   const page = await ctx.newPage();
   page.errors = [];
-  page.on('pageerror', e => page.errors.push(e.message));
+  page.on('pageerror', e => page.errors.push(e.message + ' @ ' + String(e.stack || '').split('\n').slice(1, 4).map(l => l.trim().replace(/^at /, '').replace(/http:[^ )]*index.html/, '')).join(' < ')));
   page.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) page.errors.push(m.text()); });
   page.shot = async n => page.screenshot({ path: path.join(SHOTS, `${name}-${n}.png`) });
   return { ctx, page };
