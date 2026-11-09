@@ -33,6 +33,7 @@ t('投票と上書き', () => {
   const r = g.get({ action: 'state', class: '2A' });
   assert.deepStrictEqual(r.votes.brush, [0, 1, 0, 0, 0, 0, 0, 0, 0, 1]); assert.strictEqual(r.n.brush, 2); assert.strictEqual(r.votes.mist[7], 1);
 });
+t('ぼかし絵の投票', () => { g.advance(3); assert.ok(g.post({ action: 'vote', class: '2A', client: B, kind: 'blur', value: 50 }).ok); assert.strictEqual(g.get({ action: 'state', class: '2A' }).votes.blur[5], 1); });
 t('投票の検査', () => { g.advance(3); assert.strictEqual(g.post({ action: 'vote', class: '2A', client: A, kind: 'xx', value: 1 }).error, 'kind'); assert.strictEqual(g.post({ action: 'vote', class: '2A', client: A, kind: 'brush', value: 101 }).error, 'value'); });
 t('PIN がちがう', () => assert.strictEqual(g.post({ action: 'admin', class: '2A', pin: '0000', op: 'list' }).error, 'pin'));
 t('一覧・非表示・再表示', () => {

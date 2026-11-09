@@ -196,6 +196,15 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
 .links{list-style:none;padding:0;margin:0}
 .links li{display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)}
 .links li span{flex:1}
+.guess{display:flex;gap:8px;align-items:center;margin:6px 0}
+.guess input{flex:1;min-width:0;min-height:44px;padding:6px 10px;border:1px solid var(--usuzumi);border-radius:8px;background:#fff}
+.choice button[aria-pressed=true]{background:var(--ink);color:#fff}
+.hist5{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;align-items:end;height:80px;border-bottom:1px solid var(--ink);padding-top:14px}
+.hist5 .bar{position:relative;height:100%;display:flex;align-items:flex-end}
+.hist5 .bar i{display:block;width:100%;background:var(--sumi);border-radius:3px 3px 0 0;min-height:1px}
+.hist5 .bar.mine i{background:var(--ink);outline:2px solid var(--ink);outline-offset:1px}
+.hist5 .bar b{position:absolute;left:0;right:0;text-align:center;font-size:.72rem;font-weight:400;color:var(--sumi);bottom:calc(var(--h) + 2px)}
+.labsum ul{margin:.3rem 0;padding-left:1.2em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion:reduce){.tapmark{animation:none}}
 </style>
@@ -282,6 +291,7 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
   <div class="labstep" data-step="0">
     <div class="labfig"><svg id="kanizsa" viewBox="0 0 320 300" role="img" aria-label="見えない三角形の図"></svg></div>
     <p><b>白い三角形が見えますか？</b> 三角形の線は、一本も描かれていません。</p>
+    <div class="row choice" id="kzAns"><button class="btn" data-kz="見えた">見えた</button><button class="btn" data-kz="見えなかった">見えなかった</button><button class="btn" data-kz="少し見えた">少し見えた</button></div>
     <div class="row"><button class="btn" id="kzLine" aria-pressed="false">線で確かめる</button></div>
     <p class="note" id="kzNote"></p>
   </div>
@@ -289,6 +299,7 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
   <div class="labstep" data-step="1">
     <div class="labfig"><canvas id="hideCv" width="520" height="360" aria-label="真ん中が霧で隠れた松の絵"></canvas></div>
     <p><b>霧で隠れた部分には、何が描かれているだろう。</b>頭の中で思い浮かべてから、霧を晴らしてみよう。</p>
+    <div class="guess"><label for="hideGuess" class="sr">隠れている部分の予想</label><input id="hideGuess" maxlength="30" autocomplete="off" placeholder="隠れているのは……（予想を一言）"></div>
     <div class="row"><button class="btn" id="hideBtn" aria-pressed="false">霧を晴らす</button></div>
     <p class="note" id="hideNote"></p>
   </div>
@@ -296,14 +307,19 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
   <div class="labstep" data-step="2">
     <div class="labfig"><canvas id="blurCv" width="480" height="340" aria-label="ぼかした絵"></canvas></div>
     <p><b>何の絵に見えますか？</b> 答えを決めてから、少しずつはっきりさせよう。</p>
-    <div class="row"><button class="btn" id="blurBtn">少しはっきりさせる</button><span id="blurStep" class="note"></span></div>
+    <div class="row"><button class="btn" id="blurBtn">少しはっきりさせる</button><button class="btn primary" id="blurGot">わかった！</button><span id="blurStep" class="note"></span></div>
     <p class="note" id="blurNote"></p>
+    <h3>何段階目でわかった？（クラス）</h3>
+    <div class="hist5" id="blurHist"></div>
+    <div class="hist-labels"><span>1 いちばんぼんやり</span><span>5 くっきり</span></div>
   </div>
 
   <div class="labstep" data-step="3">
     <div class="labfig"><div class="manga" id="manga"></div></div>
-    <p><b>左のコマと右のコマのあいだで、何が起きた？</b> 真ん中は描かれていません。想像してからタップ。</p>
+    <p><b>左のコマと右のコマのあいだで、何が起きた？</b> 真ん中は描かれていません。想像を書いてからタップ。</p>
+    <div class="guess"><label for="mangaGuess" class="sr">あいだのコマの予想</label><input id="mangaGuess" maxlength="30" autocomplete="off" placeholder="あいだで起きたのは……"></div>
     <p class="note" id="mangaNote"></p>
+    <div class="card labsum" id="labSum" hidden></div>
   </div>
 
   <div class="row"><button class="btn" id="labPrev">← 前へ</button><button class="btn primary" id="labNext">次へ →</button></div>
@@ -413,6 +429,7 @@ body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.hideui .badge,body.
     <span class="info" id="projInfo"></span>
     <button class="chip" id="projHistBtn" aria-pressed="false">分布</button>
     <button class="chip" id="projWalk" aria-pressed="true">歩く</button>
+    <button class="chip" id="projSound" aria-pressed="false">松風</button>
     <button class="chip" id="projFull">全画面</button>
     <button class="chip" id="projHide" title="H キーでも切り替え。画面をタップすると戻ります">文字を隠す</button>
     <a class="chip" href="#/write">とじる</a>
@@ -501,7 +518,7 @@ const Store = {
   load() {
     let d = {};
     try { d = JSON.parse(localStorage.getItem(this.key) || '{}') || {}; } catch (e) { d = {}; }
-    this.d = Object.assign({ client: '', classCode: '', gasUrl: '', lesson: false, sound: false, quality: 'auto', pre: null, post: null, mistBest: null, brushVote: null, myPosts: [], reflection: '', lastPostAt: 0 }, d);
+    this.d = Object.assign({ client: '', classCode: '', gasUrl: '', lesson: false, sound: false, quality: 'auto', lab: {}, pre: null, post: null, mistBest: null, brushVote: null, myPosts: [], reflection: '', lastPostAt: 0 }, d);
     if (!/^[A-Za-z0-9]{12,32}$/.test(this.d.client)) {
       const a = new Uint8Array(12); (crypto.getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.random() * 256));
       this.d.client = Array.from(a, b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('') + 'k';
@@ -990,23 +1007,38 @@ class Forest {
    松風（Web Audio で合成、既定はオフ）
    ========================================================= */
 const Sound = {
-  ctx: null, on: false,
+  ctx: null, on: false, nextGust: 0,
+  noise(c, sec, seed) {
+    const len = c.sampleRate * sec, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0), r = rng(seed);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) { const w = r() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0527; d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.16; }
+    /* つなぎ目でぷつっと鳴らないよう、端を短くなじませる */
+    const f = Math.floor(c.sampleRate * 0.05); for (let i = 0; i < f; i++) { const t = i / f; d[i] *= t; d[len - 1 - i] *= t; }
+    return buf;
+  },
   init() {
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
     try {
-      const c = this.ctx = new AC(), len = c.sampleRate * 4, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
-      let b0 = 0, b1 = 0, b2 = 0;
-      for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0527; d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.16; }
-      const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
-      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 0.7;
-      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
-      const swell = c.createGain(); swell.gain.value = 0.35;
+      const c = this.ctx = new AC();
+      this.lp = c.createBiquadFilter(); this.lp.type = 'lowpass'; this.lp.frequency.value = 1800; this.lp.Q.value = 0.4;
       this.level = c.createGain(); this.level.gain.value = 0.5;
+      this.gust = c.createGain(); this.gust.gain.value = 1;
       this.master = c.createGain(); this.master.gain.value = 0;
-      const l1 = c.createOscillator(); l1.frequency.value = 0.06; const l1g = c.createGain(); l1g.gain.value = 320; l1.connect(l1g).connect(bp.frequency);
-      const l2 = c.createOscillator(); l2.frequency.value = 0.11; const l2g = c.createGain(); l2g.gain.value = 0.22; l2.connect(l2g).connect(swell.gain);
-      src.connect(bp).connect(lp).connect(swell).connect(this.level).connect(this.master).connect(c.destination);
-      src.start(); l1.start(); l2.start();
+      /* 左右ふたつの松風。こずえを渡る音（高め）と、林の奥のうなり（低め） */
+      const layers = [{ pan: -0.55, f: 700, q: 0.7, lf: 0.06, sw: 0.11, seed: 3 }, { pan: 0.55, f: 520, q: 0.6, lf: 0.045, sw: 0.083, seed: 7 }, { pan: 0, f: 180, q: 0.5, lf: 0.03, sw: 0.05, seed: 11, low: true }];
+      for (const L of layers) {
+        const src = c.createBufferSource(); src.buffer = this.noise(c, 5 + L.seed % 3, L.seed); src.loop = true;
+        const bp = c.createBiquadFilter(); bp.type = L.low ? 'lowpass' : 'bandpass'; bp.frequency.value = L.f; bp.Q.value = L.q;
+        const swell = c.createGain(); swell.gain.value = L.low ? 0.25 : 0.32;
+        const o1 = c.createOscillator(); o1.frequency.value = L.lf; const g1 = c.createGain(); g1.gain.value = L.low ? 60 : 300; o1.connect(g1).connect(bp.frequency);
+        const o2 = c.createOscillator(); o2.frequency.value = L.sw; const g2 = c.createGain(); g2.gain.value = 0.2; o2.connect(g2).connect(swell.gain);
+        let node = src.connect(bp).connect(swell);
+        if (c.createStereoPanner && L.pan) { const pn = c.createStereoPanner(); pn.pan.value = L.pan; node = node.connect(pn); }
+        node.connect(this.lp);
+        src.start(); o1.start(); o2.start();
+      }
+      this.lp.connect(this.level).connect(this.gust).connect(this.master).connect(c.destination);
+      this.nextGust = c.currentTime + 4;
       return true;
     } catch (e) { this.ctx = null; return false; }
   },
@@ -1017,7 +1049,20 @@ const Sound = {
     this.on = on; this.master.gain.setTargetAtTime(on ? 0.6 : 0, this.ctx.currentTime, 0.5);
     return true;
   },
-  move(v) { if (this.on && this.level) this.level.gain.setTargetAtTime(0.45 + clamp(v, 0, 1.5) * 0.45, this.ctx.currentTime, 0.6); },
+  /* 霧が濃いほど、音はこもって遠くなる */
+  mist(m) { if (this.lp) this.lp.frequency.setTargetAtTime(lerp(4200, 900, clamp(m, 0, 1)), this.ctx.currentTime, 0.4); },
+  /* 歩く速さで風が強まり、ときどき突風が林を渡る */
+  move(v) {
+    if (!this.on || !this.level) return;
+    const t = this.ctx.currentTime;
+    this.level.gain.setTargetAtTime(0.45 + clamp(v, 0, 1.5) * 0.45, t, 0.6);
+    if (t > this.nextGust) {
+      const peak = 1.4 + Math.random() * 0.6;
+      this.gust.gain.cancelScheduledValues(t); this.gust.gain.setValueAtTime(this.gust.gain.value, t);
+      this.gust.gain.linearRampToValueAtTime(peak, t + 1.6); this.gust.gain.linearRampToValueAtTime(1, t + 5);
+      this.nextGust = t + 7 + Math.random() * 9;
+    }
+  },
 };
 
 /* =========================================================
@@ -1051,7 +1096,7 @@ const Share = {
   label() { return this.mode === 'gas' ? `クラス ${this.cls || '（未設定）'} で共有中` : '端末内のみ（共有されません）'; },
   /* --- 端末内 --- */
   lkey() { return 'kuuhaku.local.' + (this.cls || 'LOCAL'); },
-  lload() { let o = null; try { o = JSON.parse(localStorage.getItem(this.lkey()) || 'null'); } catch (e) {} return Object.assign({ open: true, posts: [], votes: { brush: {}, mist: {} } }, o || {}); },
+  lload() { let o = null; try { o = JSON.parse(localStorage.getItem(this.lkey()) || 'null'); } catch (e) {} return Object.assign({ open: true, posts: [], votes: { brush: {}, mist: {}, blur: {} } }, o || {}); },
   lsave(o) { try { localStorage.setItem(this.lkey(), JSON.stringify(o)); } catch (e) {} },
   bins(map) { const b = Array(10).fill(0); Object.values(map || {}).forEach(v => b[Math.min(9, Math.floor(v / 10))]++); return b; },
   /* --- 通信 --- */
@@ -1068,7 +1113,7 @@ const Share = {
   async state() {
     if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; return this.req({ action: 'state', class: this.cls }); }
     const o = this.lload();
-    return { ok: true, local: true, open: o.open, posts: o.posts.filter(p => !p.hidden), votes: { brush: this.bins(o.votes.brush), mist: this.bins(o.votes.mist) } };
+    return { ok: true, local: true, open: o.open, posts: o.posts.filter(p => !p.hidden), votes: { brush: this.bins(o.votes.brush), mist: this.bins(o.votes.mist), blur: this.bins(o.votes.blur) } };
   },
   async post(text, x, y) {
     const c = checkText(text); if (c.error) return { ok: false, error: c.error };
@@ -1103,7 +1148,7 @@ const Share = {
     switch (op) {
       case 'hide': case 'unhide': { const p = o.posts.find(p => p.id === extra.id); if (p) p.hidden = op === 'hide'; break; }
       case 'clear': o.posts = []; break;
-      case 'clearVotes': o.votes = { brush: {}, mist: {} }; break;
+      case 'clearVotes': o.votes = { brush: {}, mist: {}, blur: {} }; break;
       case 'open': o.open = true; break;
       case 'close': o.open = false; break;
     }
@@ -1231,7 +1276,15 @@ let labI = 0, blurLv = 0, hideOpen = false;
 const BLUR = [28, 14, 7, 3, 1];
 Screens.lab = {
   title: '補完ラボ',
-  enter() { buildKanizsa(); buildManga(); drawHide(); drawBlur(); this.go(labI); },
+  enter() {
+    buildKanizsa(); buildManga(); drawHide(); drawBlur(); this.go(labI);
+    const L = Store.d.lab || {};
+    $$('#kzAns button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kz === L.kz)));
+    $('#hideGuess').value = L.hide || ''; $('#mangaGuess').value = L.manga || '';
+    renderBlurHist(null); labSummary();
+    this.unsub = Share.subscribe(st => { if (st.ok) renderBlurHist(st.votes && st.votes.blur); });
+  },
+  leave() { this.unsub && this.unsub(); this.unsub = null; },
   go(i) {
     labI = clamp(i, 0, 3);
     $$('.labstep').forEach(s => s.classList.toggle('on', +s.dataset.step === labI));
@@ -1240,6 +1293,27 @@ Screens.lab = {
     $('#labNext').textContent = labI === 3 ? '次へ：描き込みスライダー →' : '次へ →';
   },
 };
+function labSet(k, v) { const L = Object.assign({}, Store.d.lab); L[k] = v; Store.set('lab', L); labSummary(); }
+function labSummary() {
+  const L = Store.d.lab || {}, el = $('#labSum');
+  const items = [L.kz && `見えない三角形：${L.kz}`, L.hide && `霧で隠れた所：「${L.hide}」と予想`, L.blur && `ぼかし絵：${L.blur}段階目でわかった`, L.manga && `2コマのあいだ：「${L.manga}」と予想`].filter(Boolean);
+  el.hidden = !items.length;
+  el.innerHTML = `<b>あなたが補ったもの</b><ul>${items.map(t => `<li>${esc(t)}</li>`).join('')}</ul><p class="note" style="margin:0">どれも、描かれていない所を、あなたの頭が満たしたあとです。振り返りの記録にも入ります。</p>`;
+}
+function renderBlurHist(bins) {
+  bins = bins || Array(10).fill(0);
+  const five = [1, 3, 5, 7, 9].map(i => bins[i] || 0), max = Math.max(1, ...five), mine = Store.d.lab && Store.d.lab.blur;
+  $('#blurHist').innerHTML = five.map((n, i) => { const h = (n / max * 100).toFixed(1) + '%'; return `<div class="bar${mine === i + 1 ? ' mine' : ''}" style="--h:${h}" aria-label="${i + 1}段階目：${n}人"><i style="height:${h}"></i><b>${n || ''}</b></div>`; }).join('');
+}
+$('#kzAns').addEventListener('click', e => { const b = e.target.closest('button[data-kz]'); if (!b) return; $$('#kzAns button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); labSet('kz', b.dataset.kz); });
+$('#hideGuess').addEventListener('change', e => labSet('hide', e.target.value.trim().slice(0, 30)));
+$('#mangaGuess').addEventListener('change', e => labSet('manga', e.target.value.trim().slice(0, 30)));
+$('#blurGot').addEventListener('click', async e => {
+  const step = blurLv + 1, b = e.currentTarget; labSet('blur', step); b.disabled = true;
+  const r = await Share.vote('blur', step * 20 - 10); b.disabled = false;
+  $('#blurNote').textContent = (r.ok ? `${step}段階目でわかった、と記録しました。` : errMsg(r.error)) + ' 最後まではっきりさせて、答えを確かめよう。';
+  if (Share.last && Share.last.votes) renderBlurHist(Share.last.votes.blur);
+});
 $('#labDots').addEventListener('click', e => { const b = e.target.closest('button'); if (b) Screens.lab.go(+b.dataset.i); });
 $('#labPrev').addEventListener('click', () => Screens.lab.go(labI - 1));
 $('#labNext').addEventListener('click', () => { if (labI === 3) location.hash = '#/brush'; else Screens.lab.go(labI + 1); });
@@ -1268,7 +1342,7 @@ function drawHide() {
   const P = PINES[2]; drawPine(g, P, 0.55, 300, 140, 340, { ground: true }); drawPine(g, PINES[5], 0.75, 230, 380, 335, { ground: true });
   if (!hideOpen) { const gr = g.createLinearGradient(0, 70, 0, 260); gr.addColorStop(0, 'rgba(255,254,251,0)'); gr.addColorStop(0.25, 'rgba(255,254,251,1)'); gr.addColorStop(0.75, 'rgba(255,254,251,1)'); gr.addColorStop(1, 'rgba(255,254,251,0)'); g.fillStyle = gr; g.fillRect(0, 70, cv.width, 190); }
 }
-$('#hideBtn').addEventListener('click', e => { hideOpen = !hideOpen; e.currentTarget.setAttribute('aria-pressed', String(hideOpen)); e.currentTarget.textContent = hideOpen ? 'もう一度隠す' : '霧を晴らす'; drawHide(); $('#hideNote').textContent = hideOpen ? '想像した松と同じでしたか？ 隠れていたあいだも、あなたの頭の中には何かが「あった」はずです。' : ''; });
+$('#hideBtn').addEventListener('click', e => { if ($('#hideGuess').value.trim()) labSet('hide', $('#hideGuess').value.trim().slice(0, 30)); hideOpen = !hideOpen; e.currentTarget.setAttribute('aria-pressed', String(hideOpen)); e.currentTarget.textContent = hideOpen ? 'もう一度隠す' : '霧を晴らす'; drawHide(); $('#hideNote').textContent = hideOpen ? '想像した松と同じでしたか？ 隠れていたあいだも、あなたの頭の中には何かが「あった」はずです。' : ''; });
 function drawCat(g, W, H) {
   g.fillStyle = '#fffefb'; g.fillRect(0, 0, W, H); g.fillStyle = '#1c1c1c';
   g.beginPath(); g.ellipse(W * 0.47, H * 0.7, W * 0.2, H * 0.2, 0, 0, 7); g.fill();
@@ -1293,7 +1367,7 @@ function buildManga() {
   const k2 = `<svg viewBox="0 0 90 120" aria-label="3コマ目：床に割れたコップと、知らんぷりのねこ"><line x1="0" y1="104" x2="90" y2="104" stroke="#1c1c1c" stroke-width="2"/><path d="M20 104 l6 -9 l5 9 Z M36 104 l3 -6 l7 4 Z M48 103 l8 -5 l2 6 Z M14 101 l-4 -4" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><circle cx="68" cy="56" r="11" fill="#1c1c1c"/><path d="M60 49 L61 38 L67 46 Z M70 45 L76 38 L77 50 Z" fill="#1c1c1c"/><ellipse cx="70" cy="84" rx="13" ry="18" fill="#1c1c1c"/><text x="40" y="30" font-size="12" fill="#1c1c1c">…</text></svg>`;
   const mid = `<svg viewBox="0 0 90 120" aria-label="あいだのコマ：コップが落ちる"><line x1="0" y1="40" x2="40" y2="40" stroke="#1c1c1c" stroke-width="2"/><g transform="rotate(35 50 70)"><path d="M42 58 L58 58 L56 82 L44 82 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/></g><path d="M30 50 q-4 10 0 22 M24 56 q-3 8 0 16" stroke="#1c1c1c" fill="none"/><text x="8" y="112" font-size="15" font-weight="700" fill="#1c1c1c">ガシャーン</text></svg>`;
   $('#manga').innerHTML = `<div class="koma">${k1}</div><button type="button" class="koma gap" id="mangaGap">ここで<br>何が？<br>（タップ）</button><div class="koma">${k2}</div>`;
-  $('#mangaGap').addEventListener('click', e => { const b = e.currentTarget; if (b.dataset.open) { buildManga(); $('#mangaNote').textContent = ''; return; } b.dataset.open = '1'; b.classList.remove('gap'); b.innerHTML = mid; $('#mangaNote').textContent = 'マンガでは、コマとコマの間の「描かれていない時間」を読者が補っています。描かないことで、読者の想像が動きだします。'; });
+  $('#mangaGap').addEventListener('click', e => { const b = e.currentTarget; if (b.dataset.open) { buildManga(); $('#mangaNote').textContent = ''; return; } if ($('#mangaGuess').value.trim()) labSet('manga', $('#mangaGuess').value.trim().slice(0, 30)); b.dataset.open = '1'; b.classList.remove('gap'); b.innerHTML = mid; $('#mangaNote').textContent = 'マンガでは、コマとコマの間の「描かれていない時間」を読者が補っています。描かないことで、読者の想像が動きだします。'; });
 }
 
 /* ---------- 描き込みスライダー ---------- */
@@ -1335,7 +1409,7 @@ $('#brushVote').addEventListener('click', async e => {
 
 /* ---------- 霧の松林 ---------- */
 let forest = null, forestUnsub = null;
-function setMist(v) { $('#mistOut').textContent = v; if (forest) forest.mist = v / 100; $('#overBadge').hidden = v > 6; }
+function setMist(v) { $('#mistOut').textContent = v; if (forest) forest.mist = v / 100; $('#overBadge').hidden = v > 6; Sound.mist(v / 100); }
 Screens.forest = {
   title: '霧の松林をあるく',
   enter() {
@@ -1344,6 +1418,7 @@ Screens.forest = {
     requestAnimationFrame(() => { forest.resize(); forest.start(); });
     $('#mistMine').textContent = Store.d.mistBest == null ? '' : `あなたの記録：${Store.d.mistBest}`;
     if (Store.d.sound) Sound.set(true);
+    Sound.mist(+$('#mistRange').value / 100);
     this.syncSound(); updateShareNotes();
     renderHist($('#mistHist'), null, Store.d.mistBest);
     forestUnsub = Share.subscribe(s => { if (s.ok) renderHist($('#mistHist'), s.votes && s.votes.mist, Store.d.mistBest); });
@@ -1422,7 +1497,8 @@ let projForest = null, projUnsub = null;
 Screens.proj = {
   title: '投影モード',
   enter() {
-    if (!projForest) projForest = new Forest($('#projCv'), { mist: 0.74, walk: true, auto: 0.12, seed: 23 });
+    if (!projForest) projForest = new Forest($('#projCv'), { mist: 0.74, walk: true, auto: 0.12, seed: 23, onMove: v => Sound.move(v + 0.2) });
+    $('#projSound').setAttribute('aria-pressed', 'false');
     requestAnimationFrame(() => { projForest.resize(); this.fit(); projForest.start(); });
     projUnsub = Share.subscribe(s => {
       if (!s.ok) { $('#projInfo').textContent = errMsg(s.error); return; }
@@ -1432,11 +1508,12 @@ Screens.proj = {
     });
   },
   fit() { if (projForest) projForest.wordOpt = { size: clamp(Math.round(projForest.W / 30), 20, 52), max: 12 }; },
-  leave() { projForest && projForest.stop(); projUnsub && projUnsub(); projUnsub = null; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); },
+  leave() { Sound.set(false); projForest && projForest.stop(); projUnsub && projUnsub(); projUnsub = null; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); },
   resize() { projForest && projForest.resize(); this.fit(); },
 };
 $('#projHistBtn').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); $('#projHistBox').hidden = !on; });
 $('#projWalk').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); projForest.auto = on ? 0.12 : 0; });
+$('#projSound').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; if (Sound.set(on) || !on) { e.currentTarget.setAttribute('aria-pressed', String(on)); Sound.mist(0.74); } });
 $('#projFull').addEventListener('click', () => { const el = document.documentElement; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); });
 
 /* ---------- 振り返り ---------- */
@@ -1451,6 +1528,7 @@ function buildReport() {
     `クラスコード：${Share.cls || '―'}`,
     `空白うめたい度：前 ${ty(ps)} → 後 ${ty(qs)}`,
     `  後の回答：${Store.d.post ? Store.d.post.join(' / ') : '―'}`,
+    `補完ラボ：三角形 ${(Store.d.lab || {}).kz || '―'}／隠れた所「${(Store.d.lab || {}).hide || '―'}」／ぼかし絵 ${(Store.d.lab || {}).blur ? Store.d.lab.blur + '段階目でわかった' : '―'}／2コマのあいだ「${(Store.d.lab || {}).manga || '―'}」`,
     `靄スライダー：いちばん広く深く感じた濃さ ${Store.d.mistBest ?? '―'}`,
     `描き込みスライダー：いちばん松らしい位置 ${bv ?? '―'}${bv == null ? '' : bv < 30 ? '（精緻寄り）' : bv < 68 ? '（精緻と朦朧のあいだ）' : '（荒い筆寄り）'}`,
     '白の向こうに書いた言葉：',
@@ -1549,7 +1627,7 @@ $('#tOpenBtn').addEventListener('click', () => tDo('open'));
 $('#tCloseBtn').addEventListener('click', () => tDo('close'));
 $('#tReload').addEventListener('click', () => tDo('list'));
 $('#tClear').addEventListener('click', () => { if (confirm(`クラス ${Share.cls || '（端末内）'} の投稿をすべて消します。よろしいですか？`)) tDo('clear'); });
-$('#tClearVotes').addEventListener('click', () => { if (confirm('描き込み・靄の投票をすべてリセットします。よろしいですか？')) tDo('clearVotes'); });
+$('#tClearVotes').addEventListener('click', () => { if (confirm('描き込み・靄・ぼかし絵の投票をすべてリセットします。よろしいですか？')) tDo('clearVotes'); });
 function validGas(u) { return u === '' || /^https:\/\/script\.google(usercontent)?\.com\/[\w\-\/.?=&%]+$/.test(u); }
 $('#tGasSave').addEventListener('click', () => {
   const u = $('#tGas').value.trim(); const m = $('#tGasMsg');

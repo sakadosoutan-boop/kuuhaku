@@ -61,10 +61,15 @@ async function localFlow(browser, base, vp, name) {
   });
 
   await step('補完ラボ', async () => {
-    await page.goto(base + '#/lab'); await page.click('#kzLine'); assert.match(await page.textContent('#kzNote'), /補って/); await page.shot('03-lab-kanizsa');
-    await page.click('#labNext'); await page.click('#hideBtn'); assert.match(await page.textContent('#hideNote'), /想像/);
-    await page.click('#labNext'); for (let i = 0; i < 4; i++) await page.click('#blurBtn'); assert.match(await page.textContent('#blurNote'), /ねこ/);
-    await page.click('#labNext'); await page.click('#mangaGap'); assert.match(await page.textContent('#mangaNote'), /コマとコマ/); await page.shot('04-lab-manga');
+    await page.goto(base + '#/lab'); await page.click('#kzAns [data-kz="見えた"]'); await page.click('#kzLine'); assert.match(await page.textContent('#kzNote'), /補って/); await page.shot('03-lab-kanizsa');
+    await page.click('#labNext'); await page.fill('#hideGuess', '幹が続いている'); await page.click('#hideBtn'); assert.match(await page.textContent('#hideNote'), /想像/);
+    await page.click('#labNext'); for (let i = 0; i < 2; i++) await page.click('#blurBtn');
+    await page.click('#blurGot'); await page.waitForTimeout(300); assert.match(await page.textContent('#blurNote'), /3段階目/);
+    assert.strictEqual(await page.locator('#blurHist .bar.mine b').textContent(), '1');
+    for (let i = 0; i < 2; i++) await page.click('#blurBtn'); assert.match(await page.textContent('#blurNote'), /ねこ/);
+    await page.click('#labNext'); await page.fill('#mangaGuess', 'コップが落ちた'); await page.click('#mangaGap'); assert.match(await page.textContent('#mangaNote'), /コマとコマ/);
+    const sum = await page.textContent('#labSum'); for (const re of [/三角形：見えた/, /幹が続いている/, /3段階目/, /コップが落ちた/]) assert.match(sum, re);
+    await page.shot('04-lab-manga');
     await page.click('#labNext'); await page.waitForURL(/#\/brush/);
   });
 
@@ -92,6 +97,9 @@ async function localFlow(browser, base, vp, name) {
     assert.ok(await page.isVisible('#overBadge')); await page.shot('08-forest-00');
     await setRange(page, '#mistRange', 64); await page.click('#mistRec'); await page.waitForTimeout(300);
     assert.match(await page.textContent('#mistMine'), /64/);
+    const snd = await page.evaluate(async () => { Sound.set(true); setMist(100); await new Promise(r => setTimeout(r, 1500)); const lo = Sound.lp.frequency.value; setMist(0); await new Promise(r => setTimeout(r, 1500)); const hi = Sound.lp.frequency.value; forest.vel = 1; Sound.nextGust = 0; Sound.move(1); Sound.set(false); return { on: !!Sound.ctx, lo, hi }; });
+    assert.ok(snd.on, '音が作れない'); assert.ok(snd.hi > snd.lo + 1000, `霧で音がこもらない ${snd.lo} ${snd.hi}`);
+    await setRange(page, '#mistRange', 64);
     const ft = await page.evaluate(() => new Promise(r => { let n = 0, t0 = performance.now(); const f = () => { if (++n < 60) requestAnimationFrame(f); else r((performance.now() - t0) / 60); }; requestAnimationFrame(f); }));
     console.log(`     平均フレーム時間 ${ft.toFixed(1)}ms（ヘッドレス・品質 ${await page.evaluate(() => Q.level)}）`);
   });
@@ -139,7 +147,7 @@ async function localFlow(browser, base, vp, name) {
     await page.click('#checkDone'); await page.click('#checkNext a');
     await page.fill('#rfText', '白は、松が続いていると想像させる余地だった。');
     const out = await page.inputValue('#rfOut');
-    for (const re of [/前 13点（バランス派） → 後 6点（余白たのしみ派）/, /濃さ 64/, /位置 92（荒い筆寄り）/, /・霧の向こうに続く松の道/, /想像させる余地/]) assert.match(out, re);
+    for (const re of [/補完ラボ：三角形 見えた／隠れた所「幹が続いている」／ぼかし絵 3段階目でわかった／2コマのあいだ「コップが落ちた」/, /前 13点（バランス派） → 後 6点（余白たのしみ派）/, /濃さ 64/, /位置 92（荒い筆寄り）/, /・霧の向こうに続く松の道/, /想像させる余地/]) assert.match(out, re);
     assert.match(out, /書き出した日時：/); assert.match(out, /名前や番号を書き加えて/);
     await page.click('#rfCopy'); await page.waitForTimeout(200); assert.match(await page.textContent('#rfMsg'), /コピー/);
     const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#rfSave')]);
