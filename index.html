@@ -930,6 +930,7 @@ function drawPine(g, P, d, S, ox, oy, opt = {}) {
       const w = P.tw * S * (1 - 0.65 * i / (n - 1)) / 2;
       L.push([tp[i][0] - dy / l * w, tp[i][1] + dx / l * w]); R.push([tp[i][0] + dy / l * w, tp[i][1] - dx / l * w]);
     }
+    Ink.stroke(g, tp, { w0: P.tw * S * 0.82, w1: P.tw * S * 0.3, a: 0.2 * prec, dry: 0.1, seed: P.seed ^ 0x51 });   /* 幹の淡墨 */
     Ink.line(g, L, Math.max(0.7, S * 0.0022), a); Ink.line(g, R, Math.max(0.7, S * 0.0022), a);
     /* 樹皮の鱗 */
     const br = rng(P.seed ^ 0xb4); const nBark = 70, show = nBark * Math.pow(prec, 1.3);
@@ -1063,7 +1064,7 @@ const Sprites = {
     if (this.fine.length || this.fineReq) return;
     this.fineReq = true;
     let i = 0;
-    const step = () => { if (i < this.rough.length) { this.fine.push(makeSprite(PINES[i], 0.1, Q.spriteH)); i++; setTimeout(step, 0); } };
+    const step = () => { if (i < this.rough.length) { this.fine.push(makeSprite(PINES[i], 0.3, Q.spriteH)); i++; setTimeout(step, 0); } };
     step();
   },
 };
@@ -1186,7 +1187,7 @@ const Scene = {
         W(0.65, 0.66, 0.6, 0.04, 0.18);
         for (const [cx, w, h] of [[0.42, 0.36, 0.46], [0.88, 0.3, 0.3], [0.14, 0.12, 0.14]]) {
           const pts = []; for (let i = 0; i <= 8; i++) { const a = Math.PI * (1 + i / 8); pts.push([cx + Math.cos(a) * w * (0.85 + r() * 0.3), 0.66 + Math.sin(a) * h * (0.75 + r() * 0.4)]); }
-          F(pts.concat([[cx + w, 0.66], [cx - w, 0.66]]), 0.1); L(pts, 1.3, 0.9);
+          F(pts.concat([[cx + w, 0.66], [cx - w, 0.66]]), 0.2); W(cx + w * 0.3, 0.66 - h * 0.35, w * 0.6, h * 0.45, 0.3); L(pts, 1.6, 0.92);
           for (let i = 0; i < 7; i++) { const q = pts[1 + Math.floor(r() * 7)]; L([[q[0], q[1] + 0.02], [q[0] + (r() - 0.3) * 0.06, q[1] + 0.06 + r() * h * 0.5]], 0.6, 0.5); }
         }
       }),
@@ -1209,61 +1210,90 @@ const Scene = {
     this.cache.set(n, list); return list;
   },
 };
-/* 遠景：皴を重ねた山並み、滝、塔、里、水辺の舟、鳥、日輪 */
+/* 遠景：北宋の山水画にならう。
+   山は線ではなく墨の濃淡で量感を出し（上が濃く、裾は雲煙に消える）、岩肌は襞の線と雨点皴、稜線には点苔。
+   山と山のあいだは描かずに残し、雲煙とする。 */
 function paintPanorama(W, H, hz) {
   const k = Math.min(1.5, window.devicePixelRatio || 1) * (Q.level ? 1 : 0.75), PW = W * 1.2;
   const c = newCanvas(PW * k, (hz + 2) * k), g = c.getContext('2d'), r = rng(2027);
   g.scale(k, k); g.lineCap = 'round'; g.lineJoin = 'round';
-  const u = Math.min(W, H * 1.3) / 400;     /* 線の太さの基準 */
-  const ridge = (peaks, rough, seed, step = 4) => {
-    const pts = [];
-    for (let x = -4; x <= PW + 4; x += step) {
-      let y = 0; for (const [cx, amp, wd] of peaks) { const d = (x / PW - cx) / wd; y = Math.max(y, amp * hz * Math.exp(-d * d * 1.3)); }
-      const n = Math.sin(x * 0.037 / u + seed) * 0.5 + Math.sin(x * 0.091 / u + seed * 2.3) * 0.3 + Math.sin(x * 0.21 / u + seed * 3.7) * 0.2;
-      pts.push([x, hz - Math.max(2, y + n * rough * (2.5 * u + y * 0.035))]);
+  const u = Math.min(W, H * 1.3) / 400, PAPER = '250,248,243';
+  /* 空：上ほどわずかに墨をはく。日輪は塗らずに残す */
+  let gr = g.createLinearGradient(0, 0, 0, hz); gr.addColorStop(0, ink(0.11)); gr.addColorStop(0.45, ink(0.04)); gr.addColorStop(1, ink(0)); g.fillStyle = gr; g.fillRect(0, 0, PW, hz);
+  { const sx = PW * 0.6, sy = hz * 0.15, sr = hz * 0.055; Ink.wash(g, sx, sy, sr * 4, sr * 3.2, 0.1); g.fillStyle = `rgba(${PAPER},.96)`; g.beginPath(); g.arc(sx, sy, sr, 0, 7); g.fill(); g.strokeStyle = ink(0.22); g.lineWidth = 0.7 * u; g.stroke(); }
+  for (let i = 0; i < 7; i++) { const x = PW * 0.44 + i * 6.5 * u, y = hz * 0.27 - Math.abs(i - 3) * 3.2 * u, w = 2.1 * u; Ink.line(g, [[x - w, y - w * 0.4], [x, y], [x + w, y - w * 0.5]], 0.8 * u, 0.6); }
+
+  const mass = (peaks, seed, o) => {
+    const step = 3, pts = [], P = o.p || 2.4;
+    for (let x = -6; x <= PW + 6; x += step) {
+      let y = 0; for (const [cx, amp, wd] of peaks) { const d = Math.abs((x / PW - cx) / wd); y = Math.max(y, amp * hz * Math.exp(-Math.pow(d, P))); }
+      const n = Math.sin(x * 0.05 / u + seed) * 0.45 + Math.sin(x * 0.13 / u + seed * 2.3) * 0.33 + Math.sin(x * 0.31 / u + seed * 3.7) * 0.22;
+      pts.push([x, hz - Math.max(1.5, y * (1 + n * o.rough * 0.09) + n * o.rough * 2.2 * u)]);
     }
+    let top = hz; for (const q of pts) top = Math.min(top, q[1]); const HH = hz - top;
+    g.save(); g.beginPath(); g.moveTo(pts[0][0], hz + 2); pts.forEach(q => g.lineTo(q[0], q[1])); g.lineTo(pts[pts.length - 1][0], hz + 2); g.closePath(); g.clip();
+    /* 地の墨：頂が濃く、裾へ向かって消える */
+    const gr = g.createLinearGradient(0, top, 0, hz); gr.addColorStop(0, ink(o.top)); gr.addColorStop(0.38, ink(o.top * 0.62)); gr.addColorStop(0.8, ink(o.top * 0.14)); gr.addColorStop(1, ink(0)); g.fillStyle = gr; g.fillRect(-6, top, PW + 12, HH + 2);
+    /* 峰ごとに：陰になる面の墨、襞の線 */
+    const win = Math.round(22 * u / step) + 2;
+    for (let i = win; i < pts.length - win; i++) {
+      const q = pts[i], h = hz - q[1]; if (h < HH * 0.28) continue;
+      let isTop = true; for (let j = -win; j <= win; j++) if (pts[i + j][1] < q[1]) { isTop = false; break; } if (!isTop) continue;
+      Ink.wash(g, q[0] + h * 0.17, q[1] + h * 0.45, h * 0.2, h * 0.5, o.top * 0.6); Ink.wash(g, q[0] + h * 0.05, q[1] + h * 0.14, h * 0.1, h * 0.2, o.top * 0.4);
+      const nc = 3 + Math.floor(r() * 3);
+      for (let cI = 0; cI < nc; cI++) {
+        const f = cI - (nc - 1) / 2; let x = q[0] + f * h * 0.1 + (r() - 0.5) * h * 0.04, y = q[1] + h * (0.015 + r() * 0.09 + Math.abs(f) * 0.03);
+        const line = [[x, y]], len = h * (0.4 + r() * 0.42), dir = f * 0.13 + (r() - 0.5) * 0.1;
+        for (let t = 1; t <= 8; t++) { x += dir * len / 8 + (r() - 0.5) * 2.4 * u; y += len / 8; line.push([x, y]); }
+        Ink.stroke(g, line, { w0: o.lw * 1.15 * u, w1: o.lw * 0.35 * u, a: o.line * 0.8, dry: 0.5, seed: Math.round(seed * 100 + i * 7 + cI) });
+        Ink.wash(g, line[3][0] + 3 * u + h * 0.02, line[3][1] + len * 0.1, 3 * u + h * 0.035, len * 0.42, o.top * 0.42);
+      }
+    }
+    /* 雨点皴：短い点のような筆を、頂に近いほど密に打つ */
+    const N = Math.min(5200, Math.round(o.dab * PW * HH / (10000 * u * u)));
+    for (const b of [0.4, 0.65, 0.95]) {
+      g.strokeStyle = ink(Math.min(0.9, o.line * b * 0.75)); g.lineWidth = Math.max(0.5, (0.55 + b * 0.5) * u * 0.85); g.beginPath();
+      for (let n = 0; n < N / 3; n++) { const x = r() * PW, ry = pts[clamp(Math.round((x + 6) / step), 0, pts.length - 1)][1], depth = hz - ry; if (depth < 5 * u) continue; const y = ry + 1.5 * u + Math.pow(r(), 1.8) * depth * 0.78, l = (1.8 + r() * 3.6) * u; g.moveTo(x, y); g.lineTo(x + (r() - 0.35) * 1.3 * u, y + l); }
+      g.stroke();
+    }
+    g.restore();
+    Ink.stroke(g, pts, { w0: o.lw * u, w1: o.lw * u, a: o.line, dry: 0.3, seed: Math.round(seed * 10) });
+    /* 点苔と、稜線の木立 */
+    if (o.veg) { g.fillStyle = ink(Math.min(0.8, o.line * 0.8)); for (let i = 1; i < pts.length - 1; i++) if (r() < o.veg) { const q = pts[i], n = 1 + Math.floor(r() * 3); for (let jj = 0; jj < n; jj++) { const x = q[0] + (r() - 0.5) * 5 * u, hg = (1.8 + r() * 3.4) * u * (o.vs || 1); g.beginPath(); g.ellipse(x, q[1] - hg * 0.25, (0.8 + r() * 0.9) * u * (o.vs || 1), hg * 0.55, 0, 0, 7); g.fill(); } } }
     return pts;
   };
-  const layer = (pts, fillA, lineA, lw, tex, trees) => {
-    let top = hz; for (const q of pts) top = Math.min(top, q[1]);
-    const gr = g.createLinearGradient(0, top, 0, hz); gr.addColorStop(0, ink(fillA)); gr.addColorStop(0.7, ink(fillA * 0.45)); gr.addColorStop(1, ink(fillA * 0.12));
-    g.fillStyle = gr; g.beginPath(); g.moveTo(pts[0][0], hz); pts.forEach(q => g.lineTo(q[0], q[1])); g.lineTo(pts[pts.length - 1][0], hz); g.closePath(); g.fill();
-    /* 皴：稜線から斜面に沿って、短い線を重ねる */
-    g.lineWidth = Math.max(0.5, 0.5 * u); g.strokeStyle = ink(lineA * 0.3);
-    for (let i = 1; i < pts.length - 1; i++) {
-      const q = pts[i], slope = (pts[i + 1][1] - pts[i - 1][1]) / (pts[i + 1][0] - pts[i - 1][0]), depth = hz - q[1];
-      for (let j = 0; j < tex; j++) { const l = depth * (0.12 + r() * 0.5), dx = clamp(slope, -1.2, 1.2) * l * 0.35 + (r() - 0.5) * 4 * u, y0 = q[1] + r() * depth * 0.25; g.beginPath(); g.moveTo(q[0] + (r() - 0.5) * 3, y0 + 1); g.quadraticCurveTo(q[0] + dx * 0.4, y0 + l * 0.5, q[0] + dx, y0 + l); g.stroke(); }
-    }
-    Ink.stroke(g, pts, { w0: lw * u, w1: lw * u, a: lineA, dry: 0.25, seed: Math.round(fillA * 1000) });
-    if (trees) for (let i = 2; i < pts.length - 2; i += trees) { if (r() < 0.75) drawTinyPine(g, pts[i][0], pts[i][1] + 1.5 * u, (3.2 + r() * 2.6) * u); }
-  };
-  /* 空：日輪・雲・雁 */
-  const sx = PW * 0.8, sy = hz * 0.2, sr = hz * 0.075;
-  Ink.wash(g, sx, sy, sr * 2.6, sr * 2.6, 0.07); g.strokeStyle = ink(0.7); g.lineWidth = 1.3 * u; g.beginPath(); g.arc(sx, sy, sr, 0, 7); g.stroke();
-  for (const [cx, cy, n] of [[0.6, 0.16, 5], [0.9, 0.34, 4], [0.36, 0.1, 4]]) { g.lineWidth = 1 * u; g.strokeStyle = ink(0.5); g.beginPath(); for (let i = 0; i < n; i++) { const x = PW * cx + i * 13 * u, y = hz * cy + Math.sin(i * 2) * 2 * u; g.moveTo(x + 8 * u, y); g.arc(x, y, 8 * u, 0, Math.PI, true); } g.stroke(); Ink.line(g, [[PW * cx - 16 * u, hz * cy + 1], [PW * cx + n * 13 * u + 2, hz * cy + 1]], 0.9 * u, 0.4); }
-  for (let i = 0; i < 9; i++) { const x = PW * 0.47 + i * 9 * u + (i % 2) * 3, y = hz * 0.3 - Math.abs(i - 4) * 5 * u, w = 3.4 * u; Ink.line(g, [[x - w, y - w * 0.5], [x, y], [x + w, y - w * 0.6]], 1.1 * u, 0.75); }
-  /* 遠い山・切り立つ峰・手前の丘 */
-  layer(ridge([[0.1, 0.4, 0.1], [0.3, 0.3, 0.1], [0.5, 0.36, 0.12], [0.72, 0.44, 0.09], [0.93, 0.32, 0.1]], 1, 1.1), 0.11, 0.38, 1, 2, 0);
-  const mid = ridge([[0.02, 0.62, 0.055], [0.17, 0.5, 0.045], [0.29, 0.3, 0.05], [0.68, 0.38, 0.045], [0.8, 0.7, 0.05], [0.95, 0.52, 0.05]], 1.6, 2.4, 3);
-  layer(mid, 0.2, 0.7, 1.5, 3, 5);
-  /* 滝 */
-  { const i = mid.findIndex(q => q[0] > PW * 0.775), q = mid[i], h = (hz - q[1]) * 0.62, w = 5 * u; g.fillStyle = 'rgba(250,248,243,.95)'; g.fillRect(q[0] - w / 2, q[1] + h * 0.25, w, h); Ink.line(g, [[q[0] - w / 2, q[1] + h * 0.25], [q[0] - w / 2 - 1, q[1] + h * 1.25]], 0.9 * u, 0.7); Ink.line(g, [[q[0] + w / 2, q[1] + h * 0.25], [q[0] + w / 2 + 1, q[1] + h * 1.25]], 0.9 * u, 0.7); for (let j = 0; j < 4; j++) Ink.line(g, [[q[0] - w * 0.3 + j * w * 0.2, q[1] + h * (0.35 + j * 0.05)], [q[0] - w * 0.3 + j * w * 0.2, q[1] + h * (0.9 + j * 0.06)]], 0.5 * u, 0.3); Ink.wash(g, q[0], q[1] + h * 1.28, 12 * u, 4 * u, 0.12); }
-  /* 塔 */
-  { const i = mid.findIndex(q => q[0] > PW * 0.2), q = mid[i], w = 9 * u; for (let t = 0; t < 3; t++) { const y = q[1] - t * 7 * u, ww = w * (1 - t * 0.2); Ink.line(g, [[q[0] - ww, y], [q[0] - ww * 0.8, y - 2 * u], [q[0] + ww * 0.8, y - 2 * u], [q[0] + ww, y]], 1.1 * u, 0.85); Ink.line(g, [[q[0] - ww * 0.5, y], [q[0] - ww * 0.5, y + 5 * u]], 0.9 * u, 0.8); Ink.line(g, [[q[0] + ww * 0.5, y], [q[0] + ww * 0.5, y + 5 * u]], 0.9 * u, 0.8); } Ink.line(g, [[q[0], q[1] - 16 * u], [q[0], q[1] - 26 * u]], 0.9 * u, 0.85); }
-  /* 水辺と舟 */
-  for (let j = 0; j < 7; j++) Ink.line(g, [[PW * (0.36 + j * 0.008), hz - (9 - j * 1.2) * u], [PW * (0.62 - j * 0.012), hz - (9 - j * 1.2) * u]], 0.6 * u, 0.28 + j * 0.03);
-  { const bx = PW * 0.5, by = hz - 6 * u; Ink.line(g, [[bx - 9 * u, by], [bx - 6 * u, by + 3 * u], [bx + 7 * u, by + 3 * u], [bx + 10 * u, by]], 1.1 * u, 0.85); Ink.line(g, [[bx, by + 2 * u], [bx, by - 13 * u]], 0.9 * u, 0.85); g.fillStyle = 'rgba(250,248,243,1)'; g.beginPath(); g.moveTo(bx + 1, by - 12 * u); g.lineTo(bx + 8 * u, by - 3 * u); g.lineTo(bx + 1, by - 1 * u); g.closePath(); g.fill(); Ink.line(g, [[bx + 1, by - 12 * u], [bx + 8 * u, by - 3 * u], [bx + 1, by - 1 * u]], 0.8 * u, 0.8); }
-  layer(ridge([[0.1, 0.16, 0.14], [0.34, 0.07, 0.1], [0.66, 0.08, 0.1], [0.9, 0.17, 0.14]], 0.8, 4.2, 3), 0.3, 0.85, 1.6, 2, 3);
-  /* 里 */
-  for (let j = 0; j < 4; j++) { const x = PW * (0.6 + j * 0.03), y = hz - (3 + (j % 2) * 3) * u, w = 7 * u; g.fillStyle = 'rgba(250,248,243,1)'; g.fillRect(x - w * 0.4, y - 3 * u, w * 0.8, 3.4 * u); Ink.line(g, [[x - w * 0.55, y - 3 * u], [x, y - 7.5 * u], [x + w * 0.55, y - 3 * u], [x - w * 0.55, y - 3 * u]], 0.9 * u, 0.85); Ink.line(g, [[x - w * 0.4, y - 3 * u], [x - w * 0.4, y + 0.4 * u], [x + w * 0.4, y + 0.4 * u], [x + w * 0.4, y - 3 * u]], 0.8 * u, 0.8); }
-  /* 霊峰もくっきり：稜線・雪の谷筋 */
+  /* 雲煙：山あいに、塗り残したような白い帯をたなびかせる */
+  const band = (y, h, a) => { g.globalAlpha = a; const t = Sprites.mist; g.drawImage(t, -PW * 0.12, y, PW * 0.72, h); g.drawImage(t, PW * 0.42, y + h * 0.12, PW * 0.72, h); g.globalAlpha = 1; };
+  const at = (pts, f) => pts[clamp(Math.round((PW * f + 6) / 3), 0, pts.length - 1)];
+
+  /* 遠山（淡く） */
+  mass([[0.3, 0.36, 0.085], [0.46, 0.44, 0.07], [0.6, 0.3, 0.08], [0.74, 0.5, 0.075], [0.9, 0.36, 0.085]], 1.1, { top: 0.3, line: 0.42, lw: 0.9, dab: 6, rough: 1, p: 2.2 });
+  band(hz * 0.66, hz * 0.3, 0.6);
+  /* 霊峰：雪の峰。稜線と谷筋を描き、まわりに墨をはいて白を際立たせる */
   { const pk = Peak.rect(W, H), ox = W * 0.1; g.drawImage(Sprites.peak, pk.x + ox, pk.y, pk.w, pk.h); g.drawImage(Sprites.peak, pk.x + ox, pk.y, pk.w, pk.h);
-    const top = t => pk.y + pk.h * (0.95 - Math.pow(Math.max(0, 1 - Math.abs(t - 0.46) / 0.54), 1.6) * 0.82), line = []; for (let t = 0.1; t <= 0.9; t += 0.02) line.push([pk.x + ox + pk.w * t, top(t)]);
-    Ink.stroke(g, line, { w0: 1.3 * u, w1: 1.3 * u, a: 0.75, dry: 0.3, seed: 12 });
-    g.lineWidth = Math.max(0.5, 0.6 * u); g.strokeStyle = ink(0.42);
-    for (let i = 0; i < 46; i++) { const t = 0.14 + r() * 0.72, x = pk.x + ox + pk.w * t, y = top(t) + 2, dir = t < 0.46 ? -1 : 1, l = (6 + r() * pk.h * 0.34); g.beginPath(); g.moveTo(x, y + r() * pk.h * 0.12); g.quadraticCurveTo(x + dir * l * 0.2, y + l * 0.5, x + dir * l * 0.5, y + l); g.stroke(); }
-    Ink.wash(g, pk.x + ox + pk.w * 0.3, pk.y + pk.h * 0.78, pk.w * 0.2, pk.h * 0.2, 0.1); Ink.wash(g, pk.x + ox + pk.w * 0.64, pk.y + pk.h * 0.74, pk.w * 0.2, pk.h * 0.22, 0.12); }
-  finishInk(c, 0.2);
+    const topY = t => pk.y + pk.h * (0.95 - Math.pow(Math.max(0, 1 - Math.abs(t - 0.46) / 0.54), 1.6) * 0.82), line = []; for (let t = 0.08; t <= 0.92; t += 0.02) line.push([pk.x + ox + pk.w * t, topY(t)]);
+    Ink.stroke(g, line, { w0: 1.3 * u, w1: 1.3 * u, a: 0.7, dry: 0.3, seed: 12 });
+    for (let i = 0; i < 9; i++) { const t = 0.2 + i * 0.07 + (r() - 0.5) * 0.03, dir = t < 0.46 ? -1 : 1; let x = pk.x + ox + pk.w * t, y = topY(t) + 2; const l = [[x, y]], len = pk.h * (0.25 + r() * 0.4); for (let q = 1; q <= 6; q++) { x += dir * len * 0.06 + (r() - 0.5) * 2 * u; y += len / 6; l.push([x, y]); } Ink.stroke(g, l, { w0: 1.1 * u, w1: 0.4 * u, a: 0.5, dry: 0.5, seed: 40 + i }); Ink.wash(g, l[3][0] + dir * 3 * u, l[3][1], 5 * u, len * 0.4, 0.1); } }
+  /* 主山：切り立つ岩峰（右）と、霊峰の手前に控える峰（左） */
+  const mid = mass([[0.0, 0.34, 0.05], [0.1, 0.26, 0.04], [0.21, 0.36, 0.035], [0.69, 0.48, 0.04], [0.81, 0.82, 0.052], [0.93, 0.6, 0.045], [1.0, 0.4, 0.04]], 2.4, { top: 0.44, line: 0.82, lw: 1.4, dab: 16, rough: 1.5, veg: 0.14, vs: 0.8, p: 2.8 });
+  /* 滝：塗り残した白い一筋。両脇の岩を濃く */
+  { const q = at(mid, 0.775), h = hz - q[1], x = q[0], y0 = q[1] + h * 0.22, y1 = q[1] + h * 0.8, w = 3.6 * u;
+    Ink.wash(g, x - w * 1.6, (y0 + y1) / 2, w * 1.4, h * 0.3, 0.3); Ink.wash(g, x + w * 1.6, (y0 + y1) / 2, w * 1.4, h * 0.3, 0.3);
+    g.fillStyle = `rgba(${PAPER},.97)`; g.beginPath(); g.moveTo(x - w * 0.3, y0); g.lineTo(x + w * 0.3, y0); g.lineTo(x + w * 0.7, y1); g.lineTo(x - w * 0.7, y1); g.closePath(); g.fill();
+    Ink.line(g, [[x - w * 0.3, y0], [x - w * 0.5, (y0 + y1) / 2], [x - w * 0.7, y1]], 0.8 * u, 0.6); Ink.line(g, [[x + w * 0.3, y0], [x + w * 0.5, (y0 + y1) / 2], [x + w * 0.7, y1]], 0.8 * u, 0.6);
+    g.globalAlpha = 0.9; g.drawImage(Sprites.blob, x - 16 * u, y1 - 5 * u, 32 * u, 12 * u); g.globalAlpha = 1; }
+  /* 楼閣：峰の肩に小さく */
+  { const q = at(mid, 0.215), x = q[0] + 5 * u, y = q[1] + 5 * u, w = 6.5 * u; g.fillStyle = `rgba(${PAPER},.95)`; g.fillRect(x - w * 0.55, y - 5 * u, w * 1.1, 6 * u);
+    for (let t = 0; t < 2; t++) { const yy = y - t * 6 * u, ww = w * (1 - t * 0.25); g.fillStyle = ink(0.5); g.beginPath(); g.moveTo(x - ww, yy - 1.5 * u); g.quadraticCurveTo(x, yy - 5.5 * u, x + ww, yy - 1.5 * u); g.closePath(); g.fill(); Ink.line(g, [[x - ww * 0.6, yy - 1.5 * u], [x - ww * 0.6, yy + 2.5 * u]], 0.7 * u, 0.8); Ink.line(g, [[x + ww * 0.6, yy - 1.5 * u], [x + ww * 0.6, yy + 2.5 * u]], 0.7 * u, 0.8); } }
+  band(hz * 0.78, hz * 0.22, 0.6);
+  /* 水辺：塗り残した水面に、さざ波と舟 */
+  for (let jx = 0; jx < 6; jx++) Ink.line(g, [[PW * (0.33 + jx * 0.012 + r() * 0.03), hz - (8 - jx * 1.2) * u], [PW * (0.5 + r() * 0.1 - jx * 0.01), hz - (8 - jx * 1.2) * u]], 0.5 * u, 0.22 + jx * 0.03);
+  { const bx = PW * 0.47, by = hz - 5.5 * u; g.fillStyle = ink(0.55); g.beginPath(); g.moveTo(bx - 7 * u, by); g.quadraticCurveTo(bx, by + 3.4 * u, bx + 8 * u, by - 0.5 * u); g.closePath(); g.fill(); Ink.line(g, [[bx - 1 * u, by], [bx - 1 * u, by - 8 * u]], 0.7 * u, 0.8); g.fillStyle = ink(0.4); g.beginPath(); g.ellipse(bx + 2 * u, by - 1.6 * u, 2.6 * u, 1.3 * u, 0, Math.PI, 0); g.fill(); }
+  /* 近い丘：濃い墨と、びっしりの木立 */
+  mass([[0.04, 0.3, 0.1], [0.28, 0.13, 0.07], [0.5, 0.05, 0.06], [0.7, 0.15, 0.08], [0.94, 0.32, 0.1]], 4.2, { top: 0.46, line: 0.85, lw: 1.4, dab: 20, rough: 1.3, veg: 0.22, vs: 1.05, p: 2 });
+  /* 里：木立のあいだの屋根 */
+  for (let jx = 0; jx < 4; jx++) { const x = PW * (0.56 + jx * 0.028), y = hz - (2.5 + (jx % 2) * 3) * u, w = 6 * u; g.fillStyle = `rgba(${PAPER},1)`; g.fillRect(x - w * 0.4, y - 2.6 * u, w * 0.8, 3 * u); g.fillStyle = ink(0.5); g.beginPath(); g.moveTo(x - w * 0.6, y - 2.6 * u); g.lineTo(x - w * 0.2, y - 6 * u); g.lineTo(x + w * 0.2, y - 6 * u); g.lineTo(x + w * 0.6, y - 2.6 * u); g.closePath(); g.fill(); Ink.line(g, [[x - w * 0.4, y - 2.6 * u], [x - w * 0.4, y + 0.4 * u], [x + w * 0.4, y + 0.4 * u], [x + w * 0.4, y - 2.6 * u]], 0.7 * u, 0.75); }
+  finishInk(c, 0.32);
   c.k = k;
   return c;
 }
@@ -1406,7 +1436,7 @@ class Forest {
     const W = this.W, H = this.H, hz = this.hz, f = this.f, eye = this.eye, camX = this.camX || 0, camZ = this.camZ;
     if (!this.pano) this.pano = paintPanorama(W, H, hz);
     g.globalAlpha = A; g.drawImage(this.pano, -W * 0.1 - camX * W * 0.018, 0, W * 1.2, this.pano.height / this.pano.k);
-    const gg = g.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, ink(0.15)); gg.addColorStop(0.22, ink(0.075)); gg.addColorStop(1, ink(0.03));
+    const gg = g.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, ink(0.2)); gg.addColorStop(0.16, ink(0.09)); gg.addColorStop(1, ink(0.035));
     g.fillStyle = gg; g.fillRect(0, hz, W, H - hz);
     const vis = dz => Math.min(1, 1.1 * Math.exp(-k * Math.max(0, dz - 0.9)));
     const N = 36, L = [], Rr = [];
