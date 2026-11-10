@@ -363,6 +363,25 @@ body[data-flow] .journey{display:flex}
 .toast{position:fixed;left:50%;bottom:calc(var(--foot) + 18px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:70;background:rgba(28,28,28,.92);color:#fff;padding:10px 20px;border-radius:999px;font-size:.9rem;letter-spacing:.05em;opacity:0;pointer-events:none;transition:opacity .25s,transform .35s var(--ease);max-width:calc(100vw - 32px);text-align:center}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
+/* ---- 全画面 ---- */
+.hud{max-width:min(72%,460px)}
+.xp .badge{top:auto;bottom:34px;left:10px}
+.screen.fs .badge{bottom:auto;top:max(10px,env(safe-area-inset-top))}
+@media (max-width:600px){.screen.fs .badge{top:auto;bottom:calc(190px + env(safe-area-inset-bottom))}}
+body.fs{overflow:hidden}
+body.fs .topbar,body.fs .journey{display:none}
+.screen.fs .stage{position:fixed;inset:0;z-index:50;width:100vw;height:100dvh!important;min-height:0;max-height:none;border-radius:0;box-shadow:none}
+.screen.fs .hud{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
+.screen.fs .panel{position:fixed;left:50%;transform:translateX(-50%);bottom:max(10px,env(safe-area-inset-bottom));z-index:51;width:min(560px,calc(100vw - 20px));margin:0;padding:8px 14px 12px;background:rgba(250,248,243,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+.screen.fs .panel>h3,.screen.fs .panel .hist,.screen.fs .panel .hist-labels,.screen.fs .panel .share-note,.screen.fs .panel details,.screen.fs .panel .ticks,.screen.fs .panel .msg,.screen.fs .panel .credit,.screen.fs .hint{display:none}
+.screen.fs .panel .btn.block{min-height:46px}
+.screen.fs .panel .row{margin:2px 0 6px}
+.screen.fs .walkpad{bottom:calc(170px + env(safe-area-inset-bottom))}
+.screen.fs .coach{bottom:42%}
+.screen.fs .realzoom{bottom:max(14px,env(safe-area-inset-bottom))}
+body.hideui .screen.fs .panel{display:none}
+.sheet{z-index:80}
+
 /* ---- そのほか ---- */
 .qs li{border:none;border-radius:var(--r);box-shadow:var(--shadow);padding:14px;transition:opacity .3s}
 .qs li.ans{opacity:.62}
@@ -1062,60 +1081,174 @@ function makeMist() {
 }
 
 /* 靄 0 のときの「説明しすぎの絵」 */
-function drawScenery(g, W, H, hz) {
-  const r = rng(77); g.lineCap = 'round'; g.lineJoin = 'round';
-  /* 太陽・雲・鳥 */
-  g.strokeStyle = ink(0.55); g.lineWidth = 1.4;
-  g.beginPath(); g.arc(W * 0.8, H * 0.11, H * 0.035, 0, 7); g.stroke();
-  for (let i = 0; i < 3; i++) { const cx = W * (0.55 + i * 0.13), cy = H * (0.08 + i * 0.03); g.beginPath(); for (let k = 0; k < 4; k++) g.arc(cx + k * H * 0.025, cy, H * 0.016, Math.PI, 0); g.stroke(); }
-  for (let i = 0; i < 6; i++) { const x = W * (0.45 + r() * 0.45), y = H * (0.15 + r() * 0.12), s = 5 + r() * 5; g.beginPath(); g.moveTo(x - s, y - s * 0.4); g.quadraticCurveTo(x - s * 0.4, y - s * 0.5, x, y); g.quadraticCurveTo(x + s * 0.4, y - s * 0.5, x + s, y - s * 0.4); g.stroke(); }
-  /* 山並み 3 層（皴をつけて） */
-  const layers = [{ y: hz - H * 0.17, amp: H * 0.09, a: 0.18, f: 3.1 }, { y: hz - H * 0.1, amp: H * 0.07, a: 0.26, f: 4.3 }, { y: hz - H * 0.04, amp: H * 0.04, a: 0.36, f: 6.2 }];
-  layers.forEach((L, li) => {
-    const pts = []; const ph = r() * 6;
-    for (let x = 0; x <= W + 8; x += 8) pts.push([x, L.y - Math.abs(Math.sin(x / W * L.f + ph)) * L.amp - Math.sin(x / W * L.f * 2.7 + ph) * L.amp * 0.25]);
-    g.fillStyle = ink(L.a * 0.32); g.beginPath(); g.moveTo(0, hz); pts.forEach(p => g.lineTo(p[0], p[1])); g.lineTo(W, hz); g.closePath(); g.fill();
-    Ink.line(g, pts, 1.3, L.a + 0.3);
-    g.lineWidth = 0.8; g.strokeStyle = ink(L.a + 0.15);
-    for (let i = 0; i < pts.length; i += 2) { const p = pts[i]; const l = (hz - p[1]) * (0.25 + r() * 0.35); g.beginPath(); g.moveTo(p[0], p[1] + 2); g.lineTo(p[0] + (r() - 0.5) * 6, p[1] + l); g.stroke(); }
-    if (li === 1) for (let i = 0; i < 9; i++) { const p = pts[Math.floor(r() * pts.length)]; drawTinyPine(g, p[0], p[1] + 4, 9 + r() * 5); }
-  });
-  /* 地面と草 */
-  g.fillStyle = ink(0.06); g.fillRect(0, hz, W, H - hz);
-  Ink.line(g, [[0, hz], [W, hz]], 1, 0.5);
-  g.lineWidth = 0.9; g.strokeStyle = ink(0.45);
-  for (let i = 0; i < 260; i++) { const y = hz + Math.pow(r(), 1.6) * (H - hz), x = r() * W, s = 2 + (y - hz) / (H - hz) * 9; g.beginPath(); g.moveTo(x - s * 0.4, y - s); g.lineTo(x, y); g.lineTo(x + s * 0.4, y - s); g.stroke(); }
-  /* 道 */
-  const pathL = [], pathR = [];
-  for (let i = 0; i <= 20; i++) { const t = i / 20, y = lerp(H, hz + 2, t), cx = W * (0.5 + Math.sin(t * 3.2) * 0.12 * (1 - t) + t * 0.06), hw = lerp(W * 0.16, 3, Math.pow(t, 0.7)); pathL.push([cx - hw, y]); pathR.push([cx + hw, y]); }
-  g.fillStyle = 'rgba(250,249,245,1)'; g.beginPath(); pathL.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); pathR.slice().reverse().forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill();
-  Ink.line(g, pathL, 1.4, 0.7); Ink.line(g, pathR, 1.4, 0.7);
-  for (let i = 0; i < 40; i++) { const t = r() * 0.85, a = along(pathL, t), b = along(pathR, t), u = r(); const x = lerp(a[0], b[0], u), y = a[1]; const s = 1.5 + (1 - t) * 4; g.strokeStyle = ink(0.5); g.beginPath(); g.ellipse(x, y, s * 1.6, s * 0.7, 0, 0, 7); g.stroke(); }
-  /* 柵 */
-  for (let i = 0; i < 9; i++) { const t = 0.08 + i * 0.09, p = along(pathR, t), hgt = (1 - t) * H * 0.06 + 4; Ink.line(g, [[p[0] + 10 * (1 - t), p[1]], [p[0] + 10 * (1 - t), p[1] - hgt]], 1.6, 0.75); if (i) { const q = along(pathR, t - 0.09); Ink.line(g, [[q[0] + 10 * (1 - t + 0.09), q[1] - hgt * 1.1], [p[0] + 10 * (1 - t), p[1] - hgt * 0.7]], 1.1, 0.6); } }
-  /* 川と橋 */
-  const river = []; for (let i = 0; i <= 16; i++) { const t = i / 16; river.push([lerp(-10, W * 0.36, t) + Math.sin(t * 7) * 8, lerp(H * 0.86, hz + 6, Math.pow(t, 0.8))]); }
-  for (let k = -2; k <= 2; k++) Ink.line(g, river.map(([x, y], i) => [x + k * (10 - i * 0.5), y + k * 3]), 0.9, 0.45);
-  const bm = along(river, 0.45); Ink.line(g, [[bm[0] - 24, bm[1] - 8], [bm[0] + 24, bm[1] + 4]], 3, 0.8); Ink.line(g, [[bm[0] - 24, bm[1] - 16], [bm[0] + 24, bm[1] - 4]], 1, 0.7);
-  for (let k = 0; k < 4; k++) Ink.line(g, [[bm[0] - 24 + k * 16, bm[1] - 8 + k * 4], [bm[0] - 24 + k * 16, bm[1] - 16 + k * 4]], 1, 0.7);
-  /* 家 */
-  const hx = W * 0.66, hy = hz + H * 0.045, s = Math.min(W, H) * 0.09;
-  g.fillStyle = 'rgba(250,249,245,1)'; g.fillRect(hx - s * 0.6, hy - s * 0.55, s * 1.2, s * 0.55);
-  g.strokeStyle = ink(0.85); g.lineWidth = 1.3; g.strokeRect(hx - s * 0.6, hy - s * 0.55, s * 1.2, s * 0.55);
-  g.beginPath(); g.moveTo(hx - s * 0.8, hy - s * 0.5); g.lineTo(hx - s * 0.35, hy - s * 1.05); g.lineTo(hx + s * 0.35, hy - s * 1.05); g.lineTo(hx + s * 0.8, hy - s * 0.5); g.closePath(); g.fillStyle = ink(0.12); g.fill(); g.stroke();
-  g.lineWidth = 0.8; for (let i = 0; i < 16; i++) { const t = i / 15; g.beginPath(); g.moveTo(lerp(hx - s * 0.35, hx + s * 0.35, t), hy - s * 1.05); g.lineTo(lerp(hx - s * 0.8, hx + s * 0.8, t), hy - s * 0.5); g.stroke(); }
-  g.lineWidth = 1.1; g.strokeRect(hx - s * 0.12, hy - s * 0.38, s * 0.22, s * 0.38); g.strokeRect(hx + s * 0.22, hy - s * 0.42, s * 0.24, s * 0.18);
-  g.beginPath(); g.moveTo(hx + s * 0.34, hy - s * 0.42); g.lineTo(hx + s * 0.34, hy - s * 0.24); g.moveTo(hx + s * 0.22, hy - s * 0.33); g.lineTo(hx + s * 0.46, hy - s * 0.33); g.stroke();
-  g.beginPath(); g.moveTo(hx + s * 0.25, hy - s * 1.0); for (let i = 1; i < 8; i++) g.lineTo(hx + s * 0.25 + Math.sin(i * 1.3) * 6, hy - s * 1.0 - i * 7); g.stroke();
-  /* 人 */
-  const pp = along(pathL, 0.32), px = pp[0] + 28, py = pp[1] - 2, ps = H * 0.05;
-  g.strokeStyle = ink(0.85); g.lineWidth = 1.5; g.beginPath(); g.arc(px, py - ps * 0.85, ps * 0.12, 0, 7); g.stroke();
-  g.beginPath(); g.moveTo(px - ps * 0.35, py - ps * 0.93); g.lineTo(px, py - ps * 1.15); g.lineTo(px + ps * 0.35, py - ps * 0.93); g.closePath(); g.stroke();
-  Ink.line(g, [[px, py - ps * 0.72], [px, py - ps * 0.35], [px - ps * 0.15, py]], 1.5, 0.85); Ink.line(g, [[px, py - ps * 0.35], [px + ps * 0.15, py]], 1.5, 0.85); Ink.line(g, [[px - ps * 0.2, py - ps * 0.55], [px, py - ps * 0.65], [px + ps * 0.22, py - ps * 0.5]], 1.4, 0.85);
-  /* 霊峰もくっきり */
-  const pk = Peak.rect(W, H); g.save(); g.globalAlpha = 1; g.drawImage(Sprites.peak, pk.x, pk.y, pk.w, pk.h); g.restore();
-  g.lineWidth = 0.8; g.strokeStyle = ink(0.4);
-  for (let i = 0; i < 26; i++) { const t = 0.15 + r() * 0.7, x = pk.x + pk.w * t, top = pk.y + pk.h * (0.95 - Math.pow(1 - Math.abs(t - 0.46) / 0.54, 1.6) * 0.82); g.beginPath(); g.moveTo(x, top + 3); g.lineTo(x + (t < 0.46 ? -6 : 6), top + 12 + r() * pk.h * 0.2); g.stroke(); }
+/* =========================================================
+   霧を晴らした世界（説明しすぎの絵）
+   道・草・家・人は松と同じ奥行きの世界に置き、歩くと一緒に動く。
+   山並みは遠景として一枚に描く（北宋画のように、皴を重ねて描き込む）。
+   ========================================================= */
+const pathC = z => 0.55 * Math.sin(z * 0.31) + 0.22 * Math.sin(z * 0.83 + 1.3);
+const PATH_HW = 0.2;
+function hash(n) { let t = (Math.round(n * 1000) * 374761393 + 668265263) >>> 0; t = Math.imul(t ^ t >>> 13, 1274126177); return ((t ^ t >>> 16) >>> 0) / 4294967296; }
+const Scene = {
+  spr: null, cache: new Map(),
+  KINDS: ['house', 'lantern', 'traveler', 'rocks', 'sign', 'fence', 'bush', 'house2'],
+  ensure() {
+    if (this.spr) return;
+    const U = [110, 160, 210][Q.level];
+    const mk = (wu, hu, wh, paint) => {
+      const c = newCanvas(wu * U, hu * U), g = c.getContext('2d'); g.lineCap = 'round'; g.lineJoin = 'round';
+      const X = pts => pts.map(q => [q[0] * U, q[1] * U]);
+      const T = {
+        g, U,
+        L: (pts, w = 1, a = 0.85) => Ink.line(g, X(pts), Math.max(0.6, w * U / 130), a),
+        B: (pts, w, a = 0.8, dry = 0.3, seed = 3) => Ink.stroke(g, X(pts), { w0: w * U / 100, w1: w * U / 160, a, dry, seed }),
+        F: (pts, a, paper) => { g.fillStyle = paper ? 'rgba(250,248,243,1)' : ink(a); g.beginPath(); X(pts).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); },
+        W: (x, y, rx, ry, a) => Ink.wash(g, x * U, y * U, rx * U, ry * U, a),
+      };
+      paint(T, rng(wu * 977 + hu * 131));
+      finishInk(c, 0.16);
+      return { c, w: c.width, h: c.height, wh };
+    };
+    const house = (big) => (T, r) => {
+      const { L, B, F, W } = T, gy = 0.94;
+      W(0.75, gy, 0.7, 0.05, 0.16);
+      F([[0.3, 0.56], [1.2, 0.56], [1.2, gy], [0.3, gy]], 0, true);                         /* 壁 */
+      for (const x of [0.3, 0.56, 0.92, 1.2]) L([[x, 0.56], [x, gy]], 1.5, 0.85);            /* 柱 */
+      L([[0.3, 0.7], [1.2, 0.7]], 0.9, 0.6); L([[0.26, gy], [1.24, gy]], 1.8, 0.9);
+      F([[0.62, 0.72], [0.86, 0.72], [0.86, gy], [0.62, gy]], 0.3);                          /* 戸口 */
+      L([[0.62, 0.72], [0.86, 0.72], [0.86, gy]], 1, 0.8); L([[0.62, 0.72], [0.62, gy]], 1, 0.8); L([[0.74, 0.72], [0.74, gy]], 0.7, 0.6);
+      for (let i = 0; i <= 3; i++) { L([[0.36 + i * 0.045, 0.74], [0.36 + i * 0.045, 0.88]], 0.6, 0.7); L([[0.36, 0.74 + i * 0.047], [0.495, 0.74 + i * 0.047]], 0.6, 0.7); }   /* 格子窓 */
+      for (let i = 0; i <= 3; i++) L([[0.98 + i * 0.05, 0.74], [0.98 + i * 0.05, gy]], 0.6, 0.55);                                                                    /* 板戸 */
+      const roof = [[0.1, 0.6], [0.4, 0.16], [1.1, 0.16], [1.4, 0.6]];
+      F(roof, 0.2); W(0.75, 0.42, 0.6, 0.2, 0.12);
+      for (let i = 0; i <= 46; i++) { const t = i / 46, x0 = lerp(0.4, 1.1, t) + (r() - 0.5) * 0.01, x1 = lerp(0.1, 1.4, t) + (r() - 0.5) * 0.02; L([[x0, 0.16], [lerp(x0, x1, 0.5) + (r() - 0.5) * 0.01, 0.38], [x1, 0.6 - r() * 0.02]], 0.55, 0.38 + r() * 0.3); }   /* 茅 */
+      B([[0.1, 0.6], [0.4, 0.16]], 2.4, 0.85, 0.2, 5); B([[1.1, 0.16], [1.4, 0.6]], 2.4, 0.85, 0.2, 6); B([[0.36, 0.15], [1.14, 0.15]], 3.4, 0.9, 0.2, 7);
+      B([[0.08, 0.61], [1.42, 0.61]], 3, 0.9, 0.25, 8);
+      for (let i = 0; i < 5; i++) { const x = 0.48 + i * 0.135; L([[x - 0.03, 0.17], [x, 0.09], [x + 0.03, 0.17]], 1.2, 0.85); }   /* 棟の押さえ */
+      L([[0.2, gy + 0.02], [1.34, gy + 0.02]], 0.8, 0.5);
+      if (big) { F([[1.2, 0.68], [1.46, 0.72], [1.46, gy], [1.2, gy]], 0, true); L([[1.2, 0.68], [1.46, 0.72], [1.46, gy]], 1.2, 0.8); for (let i = 0; i < 6; i++) L([[1.22 + i * 0.045, 0.7 + i * 0.007], [1.22 + i * 0.045, gy]], 0.5, 0.5); F([[1.16, 0.66], [1.5, 0.71], [1.5, 0.75], [1.16, 0.7]], 0.3); }
+      else { for (let i = 0; i < 4; i++) L([[0.02 + i * 0.05, gy], [0.02 + i * 0.05, gy - 0.13 - r() * 0.03]], 1.6, 0.8); L([[0, gy - 0.1], [0.2, gy - 0.1]], 1, 0.7); }   /* 薪 */
+    };
+    this.spr = {
+      house: mk(1.5, 1, 0.36, house(false)),
+      house2: mk(1.52, 1, 0.42, house(true)),
+      lantern: mk(0.6, 1, 0.19, ({ L, F, W }) => {
+        W(0.3, 0.95, 0.24, 0.035, 0.18);
+        F([[0.16, 0.95], [0.44, 0.95], [0.4, 0.88], [0.2, 0.88]], 0.12); L([[0.16, 0.95], [0.44, 0.95], [0.4, 0.88], [0.2, 0.88], [0.16, 0.95]], 1.1);
+        F([[0.25, 0.88], [0.35, 0.88], [0.34, 0.58], [0.26, 0.58]], 0.1); L([[0.25, 0.88], [0.26, 0.58]], 1.1); L([[0.35, 0.88], [0.34, 0.58]], 1.1);
+        L([[0.17, 0.58], [0.43, 0.58], [0.4, 0.53], [0.2, 0.53], [0.17, 0.58]], 1.1);
+        F([[0.21, 0.53], [0.39, 0.53], [0.39, 0.38], [0.21, 0.38]], 0, true); L([[0.21, 0.53], [0.21, 0.38], [0.39, 0.38], [0.39, 0.53]], 1.1); F([[0.27, 0.5], [0.33, 0.5], [0.33, 0.41], [0.27, 0.41]], 0.45);
+        F([[0.06, 0.38], [0.54, 0.38], [0.36, 0.24], [0.24, 0.24]], 0.22); L([[0.04, 0.37], [0.1, 0.39], [0.5, 0.39], [0.56, 0.37], [0.36, 0.24], [0.24, 0.24], [0.04, 0.37]], 1.3);
+        L([[0.27, 0.24], [0.26, 0.17], [0.3, 0.1], [0.34, 0.17], [0.33, 0.24]], 1.1);
+        for (let i = 0; i < 5; i++) L([[0.24 + i * 0.03, 0.26], [0.12 + i * 0.09, 0.37]], 0.5, 0.4);
+      }),
+      traveler: mk(0.7, 1, 0.18, ({ L, B, F, W }) => {
+        W(0.35, 0.96, 0.22, 0.03, 0.2);
+        F([[0.26, 0.4], [0.46, 0.4], [0.52, 0.78], [0.2, 0.78]], 0.34); L([[0.26, 0.4], [0.2, 0.78], [0.52, 0.78], [0.46, 0.4]], 1.2);   /* 衣 */
+        L([[0.36, 0.42], [0.34, 0.78]], 0.7, 0.6); L([[0.27, 0.56], [0.48, 0.58]], 1.6, 0.85);                                           /* 帯 */
+        L([[0.28, 0.78], [0.26, 0.95], [0.2, 0.96]], 1.4); L([[0.44, 0.78], [0.47, 0.95], [0.54, 0.96]], 1.4);                            /* 脚 */
+        F([[0.3, 0.3], [0.42, 0.3], [0.41, 0.4], [0.31, 0.4]], 0, true); L([[0.31, 0.32], [0.31, 0.4], [0.41, 0.4], [0.41, 0.32]], 1);     /* 顔 */
+        F([[0.1, 0.32], [0.36, 0.14], [0.62, 0.32]], 0.16); B([[0.1, 0.32], [0.36, 0.14], [0.62, 0.32]], 2, 0.9, 0.15, 4); L([[0.1, 0.32], [0.62, 0.32]], 1.2);   /* 笠 */
+        for (let i = 1; i < 6; i++) L([[0.36, 0.15], [0.1 + i * 0.087, 0.32]], 0.5, 0.45);
+        L([[0.46, 0.5], [0.58, 0.56], [0.6, 0.48]], 1.2); B([[0.6, 0.2], [0.61, 0.96]], 1.6, 0.9, 0.2, 9);                                 /* 腕と杖 */
+        F([[0.14, 0.42], [0.27, 0.4], [0.26, 0.6], [0.13, 0.58]], 0.26); L([[0.14, 0.42], [0.27, 0.4], [0.26, 0.6], [0.13, 0.58], [0.14, 0.42]], 1);   /* 荷 */
+      }),
+      sign: mk(0.6, 1, 0.16, ({ L, B, F, W }) => {
+        W(0.3, 0.96, 0.18, 0.03, 0.18);
+        B([[0.3, 0.97], [0.31, 0.3]], 3.2, 0.9, 0.2, 2); L([[0.26, 0.97], [0.27, 0.32]], 0.8, 0.7);
+        F([[0.08, 0.2], [0.52, 0.16], [0.56, 0.3], [0.52, 0.42], [0.08, 0.44]], 0, true); L([[0.08, 0.2], [0.52, 0.16], [0.56, 0.3], [0.52, 0.42], [0.08, 0.44], [0.08, 0.2]], 1.2);
+        for (let i = 0; i < 4; i++) L([[0.16 + i * 0.09, 0.24], [0.17 + i * 0.09, 0.3], [0.15 + i * 0.09, 0.37]], 1.1, 0.8);
+      }),
+      fence: mk(2.2, 0.7, 0.11, ({ L, B, W }, r) => {
+        W(1.1, 0.66, 1, 0.03, 0.14);
+        for (let i = 0; i < 6; i++) { const x = 0.12 + i * 0.39, h = 0.12 + r() * 0.08; B([[x, 0.68], [x + (r() - 0.5) * 0.02, h]], 3, 0.9, 0.25, i + 1); L([[x - 0.03, h + 0.02], [x, h - 0.03], [x + 0.03, h + 0.02]], 0.9, 0.7); }
+        for (const y of [0.28, 0.46]) B(Array.from({ length: 7 }, (_, i) => [0.06 + i * 0.35, y + Math.sin(i * 1.7) * 0.015]), 1.8, 0.85, 0.3, y * 100 | 0);
+        for (let i = 0; i < 6; i++) for (const y of [0.28, 0.46]) L([[0.09 + i * 0.39, y - 0.03], [0.15 + i * 0.39, y + 0.03]], 0.7, 0.7);
+      }),
+      rocks: mk(1.3, 0.7, 0.1, ({ L, F, W }, r) => {
+        W(0.65, 0.66, 0.6, 0.04, 0.18);
+        for (const [cx, w, h] of [[0.42, 0.36, 0.46], [0.88, 0.3, 0.3], [0.14, 0.12, 0.14]]) {
+          const pts = []; for (let i = 0; i <= 8; i++) { const a = Math.PI * (1 + i / 8); pts.push([cx + Math.cos(a) * w * (0.85 + r() * 0.3), 0.66 + Math.sin(a) * h * (0.75 + r() * 0.4)]); }
+          F(pts.concat([[cx + w, 0.66], [cx - w, 0.66]]), 0.1); L(pts, 1.3, 0.9);
+          for (let i = 0; i < 7; i++) { const q = pts[1 + Math.floor(r() * 7)]; L([[q[0], q[1] + 0.02], [q[0] + (r() - 0.3) * 0.06, q[1] + 0.06 + r() * h * 0.5]], 0.6, 0.5); }
+        }
+      }),
+      bush: mk(1.1, 0.6, 0.075, ({ L, W }, r) => {
+        W(0.55, 0.5, 0.45, 0.1, 0.12);
+        for (let i = 0; i < 64; i++) { const x = 0.12 + r() * 0.86, a = -Math.PI / 2 + (x - 0.55) * 1.6 + (r() - 0.5) * 0.5, l = 0.1 + r() * 0.3 * (1 - Math.abs(x - 0.55) * 1.2); L([[x, 0.57], [x + Math.cos(a) * l * 0.5, 0.57 + Math.sin(a) * l * 0.55], [x + Math.cos(a) * l, 0.57 + Math.sin(a) * l]], 0.6, 0.45 + r() * 0.4); }
+      }),
+      tuft: mk(0.4, 0.3, 0.036, ({ L }, r) => { for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * 0.3 + (r() - 0.5) * 0.2, l = 0.14 + r() * 0.1; L([[0.2, 0.28], [0.2 + Math.cos(a) * l * 0.5, 0.28 + Math.sin(a) * l * 0.6], [0.2 + Math.cos(a) * l * 1.1, 0.28 + Math.sin(a) * l]], 1.2, 0.75); } }),
+    };
+  },
+  /* 奥行き 1.6 ごとに一つ、決まった場所に決まったものが立つ（もどれば同じものがある） */
+  at(n) {
+    if (this.cache.has(n)) return this.cache.get(n);
+    if (this.cache.size > 60) this.cache.clear();
+    const kind = this.KINDS[Math.floor(hash(n * 7 + 1) * this.KINDS.length)], z = (n + 0.2 + 0.6 * hash(n * 3 + 2)) * 1.6, side = hash(n * 5 + 3) < 0.5 ? -1 : 1;
+    const off = { house: 0.72, house2: 0.8, lantern: 0.13, traveler: -0.12, rocks: 0.36, sign: 0.12, fence: 0.2, bush: 0.3 }[kind];
+    const list = [{ kind, z, side, x: pathC(z) + side * (PATH_HW + off) }];
+    const z2 = z + 0.5 + hash(n * 11) * 0.5; list.push({ kind: hash(n * 13) < 0.5 ? 'bush' : 'rocks', z: z2, side: -side, x: pathC(z2) - side * (PATH_HW + 0.25 + hash(n * 17) * 0.5) });
+    if (kind === 'house' || kind === 'house2') { const z3 = z - 0.25; list.push({ kind: 'fence', z: z3, side, x: pathC(z3) + side * (PATH_HW + 0.2) }); }
+    this.cache.set(n, list); return list;
+  },
+};
+/* 遠景：皴を重ねた山並み、滝、塔、里、水辺の舟、鳥、日輪 */
+function paintPanorama(W, H, hz) {
+  const k = Math.min(1.5, window.devicePixelRatio || 1) * (Q.level ? 1 : 0.75), PW = W * 1.2;
+  const c = newCanvas(PW * k, (hz + 2) * k), g = c.getContext('2d'), r = rng(2027);
+  g.scale(k, k); g.lineCap = 'round'; g.lineJoin = 'round';
+  const u = Math.min(W, H * 1.3) / 400;     /* 線の太さの基準 */
+  const ridge = (peaks, rough, seed, step = 4) => {
+    const pts = [];
+    for (let x = -4; x <= PW + 4; x += step) {
+      let y = 0; for (const [cx, amp, wd] of peaks) { const d = (x / PW - cx) / wd; y = Math.max(y, amp * hz * Math.exp(-d * d * 1.3)); }
+      const n = Math.sin(x * 0.037 / u + seed) * 0.5 + Math.sin(x * 0.091 / u + seed * 2.3) * 0.3 + Math.sin(x * 0.21 / u + seed * 3.7) * 0.2;
+      pts.push([x, hz - Math.max(2, y + n * rough * (2.5 * u + y * 0.035))]);
+    }
+    return pts;
+  };
+  const layer = (pts, fillA, lineA, lw, tex, trees) => {
+    let top = hz; for (const q of pts) top = Math.min(top, q[1]);
+    const gr = g.createLinearGradient(0, top, 0, hz); gr.addColorStop(0, ink(fillA)); gr.addColorStop(0.7, ink(fillA * 0.45)); gr.addColorStop(1, ink(fillA * 0.12));
+    g.fillStyle = gr; g.beginPath(); g.moveTo(pts[0][0], hz); pts.forEach(q => g.lineTo(q[0], q[1])); g.lineTo(pts[pts.length - 1][0], hz); g.closePath(); g.fill();
+    /* 皴：稜線から斜面に沿って、短い線を重ねる */
+    g.lineWidth = Math.max(0.5, 0.5 * u); g.strokeStyle = ink(lineA * 0.3);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const q = pts[i], slope = (pts[i + 1][1] - pts[i - 1][1]) / (pts[i + 1][0] - pts[i - 1][0]), depth = hz - q[1];
+      for (let j = 0; j < tex; j++) { const l = depth * (0.12 + r() * 0.5), dx = clamp(slope, -1.2, 1.2) * l * 0.35 + (r() - 0.5) * 4 * u, y0 = q[1] + r() * depth * 0.25; g.beginPath(); g.moveTo(q[0] + (r() - 0.5) * 3, y0 + 1); g.quadraticCurveTo(q[0] + dx * 0.4, y0 + l * 0.5, q[0] + dx, y0 + l); g.stroke(); }
+    }
+    Ink.stroke(g, pts, { w0: lw * u, w1: lw * u, a: lineA, dry: 0.25, seed: Math.round(fillA * 1000) });
+    if (trees) for (let i = 2; i < pts.length - 2; i += trees) { if (r() < 0.75) drawTinyPine(g, pts[i][0], pts[i][1] + 1.5 * u, (3.2 + r() * 2.6) * u); }
+  };
+  /* 空：日輪・雲・雁 */
+  const sx = PW * 0.8, sy = hz * 0.2, sr = hz * 0.075;
+  Ink.wash(g, sx, sy, sr * 2.6, sr * 2.6, 0.07); g.strokeStyle = ink(0.7); g.lineWidth = 1.3 * u; g.beginPath(); g.arc(sx, sy, sr, 0, 7); g.stroke();
+  for (const [cx, cy, n] of [[0.6, 0.16, 5], [0.9, 0.34, 4], [0.36, 0.1, 4]]) { g.lineWidth = 1 * u; g.strokeStyle = ink(0.5); g.beginPath(); for (let i = 0; i < n; i++) { const x = PW * cx + i * 13 * u, y = hz * cy + Math.sin(i * 2) * 2 * u; g.moveTo(x + 8 * u, y); g.arc(x, y, 8 * u, 0, Math.PI, true); } g.stroke(); Ink.line(g, [[PW * cx - 16 * u, hz * cy + 1], [PW * cx + n * 13 * u + 2, hz * cy + 1]], 0.9 * u, 0.4); }
+  for (let i = 0; i < 9; i++) { const x = PW * 0.47 + i * 9 * u + (i % 2) * 3, y = hz * 0.3 - Math.abs(i - 4) * 5 * u, w = 3.4 * u; Ink.line(g, [[x - w, y - w * 0.5], [x, y], [x + w, y - w * 0.6]], 1.1 * u, 0.75); }
+  /* 遠い山・切り立つ峰・手前の丘 */
+  layer(ridge([[0.1, 0.4, 0.1], [0.3, 0.3, 0.1], [0.5, 0.36, 0.12], [0.72, 0.44, 0.09], [0.93, 0.32, 0.1]], 1, 1.1), 0.11, 0.38, 1, 2, 0);
+  const mid = ridge([[0.02, 0.62, 0.055], [0.17, 0.5, 0.045], [0.29, 0.3, 0.05], [0.68, 0.38, 0.045], [0.8, 0.7, 0.05], [0.95, 0.52, 0.05]], 1.6, 2.4, 3);
+  layer(mid, 0.2, 0.7, 1.5, 3, 5);
+  /* 滝 */
+  { const i = mid.findIndex(q => q[0] > PW * 0.775), q = mid[i], h = (hz - q[1]) * 0.62, w = 5 * u; g.fillStyle = 'rgba(250,248,243,.95)'; g.fillRect(q[0] - w / 2, q[1] + h * 0.25, w, h); Ink.line(g, [[q[0] - w / 2, q[1] + h * 0.25], [q[0] - w / 2 - 1, q[1] + h * 1.25]], 0.9 * u, 0.7); Ink.line(g, [[q[0] + w / 2, q[1] + h * 0.25], [q[0] + w / 2 + 1, q[1] + h * 1.25]], 0.9 * u, 0.7); for (let j = 0; j < 4; j++) Ink.line(g, [[q[0] - w * 0.3 + j * w * 0.2, q[1] + h * (0.35 + j * 0.05)], [q[0] - w * 0.3 + j * w * 0.2, q[1] + h * (0.9 + j * 0.06)]], 0.5 * u, 0.3); Ink.wash(g, q[0], q[1] + h * 1.28, 12 * u, 4 * u, 0.12); }
+  /* 塔 */
+  { const i = mid.findIndex(q => q[0] > PW * 0.2), q = mid[i], w = 9 * u; for (let t = 0; t < 3; t++) { const y = q[1] - t * 7 * u, ww = w * (1 - t * 0.2); Ink.line(g, [[q[0] - ww, y], [q[0] - ww * 0.8, y - 2 * u], [q[0] + ww * 0.8, y - 2 * u], [q[0] + ww, y]], 1.1 * u, 0.85); Ink.line(g, [[q[0] - ww * 0.5, y], [q[0] - ww * 0.5, y + 5 * u]], 0.9 * u, 0.8); Ink.line(g, [[q[0] + ww * 0.5, y], [q[0] + ww * 0.5, y + 5 * u]], 0.9 * u, 0.8); } Ink.line(g, [[q[0], q[1] - 16 * u], [q[0], q[1] - 26 * u]], 0.9 * u, 0.85); }
+  /* 水辺と舟 */
+  for (let j = 0; j < 7; j++) Ink.line(g, [[PW * (0.36 + j * 0.008), hz - (9 - j * 1.2) * u], [PW * (0.62 - j * 0.012), hz - (9 - j * 1.2) * u]], 0.6 * u, 0.28 + j * 0.03);
+  { const bx = PW * 0.5, by = hz - 6 * u; Ink.line(g, [[bx - 9 * u, by], [bx - 6 * u, by + 3 * u], [bx + 7 * u, by + 3 * u], [bx + 10 * u, by]], 1.1 * u, 0.85); Ink.line(g, [[bx, by + 2 * u], [bx, by - 13 * u]], 0.9 * u, 0.85); g.fillStyle = 'rgba(250,248,243,1)'; g.beginPath(); g.moveTo(bx + 1, by - 12 * u); g.lineTo(bx + 8 * u, by - 3 * u); g.lineTo(bx + 1, by - 1 * u); g.closePath(); g.fill(); Ink.line(g, [[bx + 1, by - 12 * u], [bx + 8 * u, by - 3 * u], [bx + 1, by - 1 * u]], 0.8 * u, 0.8); }
+  layer(ridge([[0.1, 0.16, 0.14], [0.34, 0.07, 0.1], [0.66, 0.08, 0.1], [0.9, 0.17, 0.14]], 0.8, 4.2, 3), 0.3, 0.85, 1.6, 2, 3);
+  /* 里 */
+  for (let j = 0; j < 4; j++) { const x = PW * (0.6 + j * 0.03), y = hz - (3 + (j % 2) * 3) * u, w = 7 * u; g.fillStyle = 'rgba(250,248,243,1)'; g.fillRect(x - w * 0.4, y - 3 * u, w * 0.8, 3.4 * u); Ink.line(g, [[x - w * 0.55, y - 3 * u], [x, y - 7.5 * u], [x + w * 0.55, y - 3 * u], [x - w * 0.55, y - 3 * u]], 0.9 * u, 0.85); Ink.line(g, [[x - w * 0.4, y - 3 * u], [x - w * 0.4, y + 0.4 * u], [x + w * 0.4, y + 0.4 * u], [x + w * 0.4, y - 3 * u]], 0.8 * u, 0.8); }
+  /* 霊峰もくっきり：稜線・雪の谷筋 */
+  { const pk = Peak.rect(W, H), ox = W * 0.1; g.drawImage(Sprites.peak, pk.x + ox, pk.y, pk.w, pk.h); g.drawImage(Sprites.peak, pk.x + ox, pk.y, pk.w, pk.h);
+    const top = t => pk.y + pk.h * (0.95 - Math.pow(Math.max(0, 1 - Math.abs(t - 0.46) / 0.54), 1.6) * 0.82), line = []; for (let t = 0.1; t <= 0.9; t += 0.02) line.push([pk.x + ox + pk.w * t, top(t)]);
+    Ink.stroke(g, line, { w0: 1.3 * u, w1: 1.3 * u, a: 0.75, dry: 0.3, seed: 12 });
+    g.lineWidth = Math.max(0.5, 0.6 * u); g.strokeStyle = ink(0.42);
+    for (let i = 0; i < 46; i++) { const t = 0.14 + r() * 0.72, x = pk.x + ox + pk.w * t, y = top(t) + 2, dir = t < 0.46 ? -1 : 1, l = (6 + r() * pk.h * 0.34); g.beginPath(); g.moveTo(x, y + r() * pk.h * 0.12); g.quadraticCurveTo(x + dir * l * 0.2, y + l * 0.5, x + dir * l * 0.5, y + l); g.stroke(); }
+    Ink.wash(g, pk.x + ox + pk.w * 0.3, pk.y + pk.h * 0.78, pk.w * 0.2, pk.h * 0.2, 0.1); Ink.wash(g, pk.x + ox + pk.w * 0.64, pk.y + pk.h * 0.74, pk.w * 0.2, pk.h * 0.22, 0.12); }
+  finishInk(c, 0.2);
+  c.k = k;
+  return c;
 }
 function drawTinyPine(g, x, y, s) { Ink.line(g, [[x, y], [x, y - s]], 1, 0.6); for (let k = 0; k < 3; k++) { const yy = y - s * (0.45 + k * 0.25), w = s * (0.5 - k * 0.12); Ink.line(g, [[x - w, yy + 2], [x, yy - 1], [x + w, yy + 2]], 1, 0.6); } }
 const Peak = { rect(W, H) { const w = Math.min(W * 0.42, H * 0.6), h = w * 190 / 360; return { x: W * 0.04, y: H * 0.05, w, h }; } };
@@ -1143,7 +1276,7 @@ class Forest {
     this.f = Math.min(this.H * 0.95, this.W * 1.5);
     this.hz = this.H * 0.5; this.eye = 0.5;
     this.X = (this.W / 2) / (this.f / (this.far * 0.55)) * 1.15;
-    this.scenery = null; this.paper = Tex.paper(this.W, this.H);
+    this.pano = null; this.paper = Tex.paper(this.W, this.H);
     return true;
   }
   spawnX() { let x = (this.rand() * 2 - 1) * this.X; if (Math.abs(x) < 0.22) x += Math.sign(x || 1) * 0.22; return x; }
@@ -1152,7 +1285,8 @@ class Forest {
     const N = Q.pines; this.pines = [];
     for (let i = 0; i < N; i++) this.pines.push(this.newPine(this.camZ + 0.5 + (i + this.rand()) / N * (this.far - 0.5)));
   }
-  newPine(z) {
+  newPine(z) { const q = this._newPine(z), c = pathC(q.z); if (Math.abs(q.x - c) < 0.42) q.x = c + (q.x >= c ? 1 : -1) * (0.42 + this.rand() * 0.15); return q; }
+  _newPine(z) {
     /* 松は四、五本ずつまとまって立つ */
     if (this.lastP && this.rand() < 0.55) { const q = this.lastP; return (this.lastP = { z: z + (this.rand() - 0.5) * 0.5, x: clamp(q.x + (this.rand() - 0.5) * 1.1, -this.X, this.X), v: Math.floor(this.rand() * Sprites.rough.length), hs: q.hs * (0.75 + this.rand() * 0.4), flip: this.rand() < 0.5 }); }
     return (this.lastP = { z, x: this.spawnX(), v: Math.floor(this.rand() * Sprites.rough.length), hs: 1.0 + this.rand() * 0.6, flip: this.rand() < 0.5 });
@@ -1194,16 +1328,15 @@ class Forest {
     const sceneA = 1 - smooth(0.02, 0.5, mist);
     const peakR = Peak.rect(W, H);
     g.globalAlpha = lerp(0.85, 0.5, mist) * (1 - sceneA); if (g.globalAlpha > 0.01) g.drawImage(Sprites.peak, peakR.x, peakR.y, peakR.w, peakR.h);
-    if (sceneA > 0.01) {
-      if (!this.scenery) { this.scenery = newCanvas(W * dpr, H * dpr); const sg = this.scenery.getContext('2d'); sg.scale(dpr, dpr); drawScenery(sg, W, H, this.hz); }
-      g.globalAlpha = sceneA; g.drawImage(this.scenery, 0, 0, W, H);
-    }
     const fineMix = 1 - smooth(0.04, 0.4, mist);
     if (fineMix > 0) Sprites.ensureFine();
     const k = 0.05 + Math.pow(mist, 1.4) * 0.72;
+    const objA = 1 - smooth(0.05, 0.6, mist), camX = this.camX || 0;
+    if (sceneA > 0.01) this.drawWorld(g, sceneA, k);
     /* 奥から順に並べる（松と霧の層） */
     const items = [];
     for (const p of this.pines) items.push({ dz: p.z - this.camZ, p });
+    if (objA > 0.01) { Scene.ensure(); for (let n = Math.floor((this.camZ + 0.35) / 1.6) - 1, n1 = Math.floor((this.camZ + this.far) / 1.6); n <= n1; n++) for (const o of Scene.at(n)) { const dz = o.z - this.camZ; if (dz > 0.34 && dz < this.far) items.push({ dz, o }); } }
     const ML = Q.mistLayers;
     for (let i = 0; i < ML; i++) items.push({ dz: [6.2, 3.4, 1.8][i], m: i });
     items.sort((a, b) => b.dz - a.dz);
@@ -1216,10 +1349,19 @@ class Forest {
         g.globalAlpha = a; g.drawImage(tex, -off, y, tw, th); g.drawImage(tex, tw - off, y, tw, th);
         continue;
       }
+      if (it.o) {
+        const o = it.o, sp = Scene.spr[o.kind];
+        const a = Math.min(0.96, 1.1 * Math.exp(-k * Math.max(0, dz - 0.9))) * smooth(0.34, 0.9, dz) * smooth(this.far, this.far - 1.5, dz) * objA; if (a < 0.012) continue;
+        const sx = W / 2 + (o.x - camX) * s, sy = this.hz + this.eye * s, dh = sp.wh * s, dw = dh * sp.w / sp.h;
+        if (sx - dw > W || sx + dw < 0) continue;
+        g.globalAlpha = a;
+        if (o.side < 0) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(sp.c, -dw / 2, sy - dh * 0.95, dw, dh); g.restore(); } else g.drawImage(sp.c, sx - dw / 2, sy - dh * 0.95, dw, dh);
+        continue;
+      }
       const p = it.p;
       let a = Math.min(0.94, 1.1 * Math.exp(-k * Math.max(0, dz - 0.9))) * smooth(0.32, 1.05, dz) * smooth(this.far + 0.4, this.far - 1.2, dz);
       if (a < 0.012) continue;
-      const sx = W / 2 + (p.x - (this.camX || 0)) * s, sy = this.hz + this.eye * s;
+      const sx = W / 2 + (p.x - camX) * s, sy = this.hz + this.eye * s;
       const sp = Sprites.rough[p.v % Sprites.rough.length], hpx = p.hs * s, sc = hpx / sp.S, dw = sp.w * sc, dh = sp.h * sc;
       const x0 = sx - sp.ax * dw, y0 = sy - sp.ay * dh;
       if (x0 > W || x0 + dw < 0) continue;
@@ -1241,6 +1383,33 @@ class Forest {
     }
     g.globalAlpha = 1;
     if (this.words && this.words.length) this.drawWords();
+  }
+  /* 霧が晴れるほど現れる：遠景の山並み、地面、うねって奥へ続く道、敷石、草 */
+  drawWorld(g, A, k) {
+    const W = this.W, H = this.H, hz = this.hz, f = this.f, eye = this.eye, camX = this.camX || 0, camZ = this.camZ;
+    if (!this.pano) this.pano = paintPanorama(W, H, hz);
+    g.globalAlpha = A; g.drawImage(this.pano, -W * 0.1 - camX * W * 0.018, 0, W * 1.2, this.pano.height / this.pano.k);
+    const gg = g.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, ink(0.15)); gg.addColorStop(0.22, ink(0.075)); gg.addColorStop(1, ink(0.03));
+    g.fillStyle = gg; g.fillRect(0, hz, W, H - hz);
+    const vis = dz => Math.min(1, 1.1 * Math.exp(-k * Math.max(0, dz - 0.9)));
+    const N = 36, L = [], Rr = [];
+    for (let i = 0; i <= N; i++) { const dz = 0.28 * Math.pow(this.far / 0.28, i / N), z = camZ + dz, s = f / dz, c = pathC(z), hw = PATH_HW * (1 + 0.16 * Math.sin(z * 2.7)), y = hz + eye * s; L.push([W / 2 + (c - hw - camX) * s, y, dz, s]); Rr.push([W / 2 + (c + hw + 0.05 * Math.sin(z * 1.9) - camX) * s, y, dz, s]); }
+    g.fillStyle = 'rgba(251,249,244,1)'; g.beginPath(); L.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); for (let i = N; i >= 0; i--) g.lineTo(Rr[i][0], Rr[i][1]); g.closePath(); g.fill();
+    g.lineCap = 'round'; g.strokeStyle = ink(0.86);
+    for (const E of [L, Rr]) for (let i = 0; i < N; i++) { const a = E[i], b = E[i + 1]; if (a[1] > H + 40 && b[1] > H + 40) continue; g.globalAlpha = A * vis(a[2]) * 0.62; g.lineWidth = clamp(a[3] * 0.0045, 0.6, 2); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+    /* 敷石 */
+    for (let m = Math.ceil((camZ + 0.36) / 0.4), m1 = Math.floor((camZ + this.far * 0.75) / 0.4); m <= m1; m++) {
+      const z = m * 0.4, dz = z - camZ, s = f / dz, x = W / 2 + (pathC(z) + (hash(m) * 1.5 - 0.75) * PATH_HW - camX) * s, y = hz + eye * s, rx = s * (0.02 + 0.022 * hash(m + 9.5));
+      g.globalAlpha = A * vis(dz) * 0.7; g.lineWidth = clamp(s * 0.0035, 0.5, 1.8); g.fillStyle = ink(0.07); g.beginPath(); g.ellipse(x, y, rx, rx * 0.34, 0, 0, 7); g.fill(); g.stroke();
+    }
+    /* 草 */
+    Scene.ensure(); const tu = Scene.spr.tuft, stepX = Q.level ? 0.7 : 1.2;
+    for (let zi = Math.ceil((camZ + 0.4) / 0.5), z1 = Math.floor((camZ + 5.5) / 0.5); zi <= z1; zi++) for (let xi = Math.floor((camX - this.X * 1.3) / stepX), x1 = Math.ceil((camX + this.X * 1.3) / stepX); xi <= x1; xi++) {
+      const z = (zi + 0.8 * hash(zi * 131 + xi * 17)) * 0.5, x = (xi + hash(zi * 57 + xi * 91)) * stepX, dz = z - camZ; if (dz < 0.36 || Math.abs(x - pathC(z)) < PATH_HW + 0.07) continue;
+      const s = f / dz, dh = tu.wh * s * (0.8 + hash(zi + xi * 3.3) * 0.6), dw = dh * tu.w / tu.h; g.globalAlpha = A * vis(dz) * 0.85; g.drawImage(tu.c, W / 2 + (x - camX) * s - dw / 2, hz + eye * s - dh * 0.93, dw, dh);
+    }
+    g.globalAlpha = A * 0.55; Ink.line(g, [[0, hz], [W, hz]], 1, 0.6);
+    g.globalAlpha = 1;
   }
   wordSprite(w, size) {
     if (w.spr && w.sprSize === size) return w.spr;
@@ -1500,6 +1669,7 @@ function route() {
   const h = location.hash.replace(/^#\/?/, '') || 'home';
   const [name, arg] = h.split('/');
   const sc = Screens[name] ? name : 'home';
+  if (document.body.classList.contains('fs')) setFs(false);
   if (current && Screens[current].leave) Screens[current].leave();
   document.body.classList.remove('hideui');
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === 's-' + sc));
@@ -1564,7 +1734,27 @@ $('#classInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#c
 
 /* ---------- お知らせ・道しるべ ---------- */
 let toastT = null;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
+function toast(msg, ms = 2200) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); }
+/* 全画面：舞台を画面いっぱいに広げる。ブラウザの全画面が使えない端末（iPhone など）でも、ページ内で広げる */
+let fsNative = false;
+function setFs(on) {
+  const sec = $('#s-' + current); if (!sec || !sec.classList.contains('xp')) on = false;
+  $$('.screen.fs').forEach(x => x.classList.remove('fs'));
+  document.body.classList.toggle('fs', !!on);
+  if (on) { sec.classList.add('fs'); const el = document.documentElement; if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); }
+  else if (document.fullscreenElement && fsNative) document.exitFullscreen().catch(() => {});
+  $$('.fsbtn').forEach(b => { b.textContent = on ? 'もどる' : '全画面'; b.setAttribute('aria-pressed', String(!!on)); });
+  const again = () => { const sc = Screens[current]; if (sc && sc.resize) sc.resize(); };
+  setTimeout(again, 60); setTimeout(again, 400);
+}
+document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement) { if (document.body.classList.contains('fs')) fsNative = true; } else { const was = fsNative; fsNative = false; if (was && document.body.classList.contains('fs')) setFs(false); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs')) setFs(false); });
+$$('.xp .stage').forEach(st => {
+  let hud = st.querySelector('.hud'); if (!hud) { hud = document.createElement('div'); hud.className = 'hud'; st.appendChild(hud); }
+  const b = document.createElement('button'); b.className = 'chip fsbtn'; b.type = 'button'; b.textContent = '全画面'; b.setAttribute('aria-pressed', 'false'); hud.appendChild(b);
+  b.addEventListener('pointerdown', e => e.stopPropagation());
+  b.addEventListener('click', e => { e.stopPropagation(); setFs(!document.body.classList.contains('fs')); });
+});
 const FLOW = ['check', 'lab', 'brush', 'forest', 'write', 'reflect'];
 function renderJourney(sc, arg) {
   let i = FLOW.indexOf(sc); if (sc === 'check' && arg === 'post') i = 5;
@@ -1996,6 +2186,7 @@ $('#realRow').addEventListener('click', e => {
   $$('#realRow .hs').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   const h = REAL_HS[+b.dataset.i];
   $('#realNote').innerHTML = `<p style="margin:0"><b>${+b.dataset.i + 1}（${h.side === 'right' ? '右隻' : '左隻'}）</b>　${esc(h.t)}</p>`;
+  if (document.body.classList.contains('fs')) toast(h.t, 6000);
 });
 $('#realIn').addEventListener('click', () => realZoom(realZ * 1.6));
 $('#realOut').addEventListener('click', () => realZoom(realZ / 1.6));
