@@ -79,6 +79,8 @@ async function localFlow(browser, base, vp, name) {
     await page.click('#checkDone');
     const t = await page.textContent('#checkKake'); assert.match(t, /前：.*13点・バランス派/); assert.match(t, /良し悪しはありません/);
     await page.locator('#checkResult').scrollIntoViewIfNeeded(); await page.shot('02-check');
+    await page.evaluate(() => renderKake(document.querySelector('#checkKake'), Store.d.pre, [3, 3, 4, 3, 4, 3])); await page.locator('#checkKake').scrollIntoViewIfNeeded(); await page.shot('02b-check-both');
+    await page.evaluate(() => renderKake(document.querySelector('#checkKake'), Store.d.pre, Store.d.post));
   });
 
   await step('ホーム（つづきから・道のり）', async () => {
@@ -97,11 +99,11 @@ async function localFlow(browser, base, vp, name) {
 
   await step('補完ラボ', async () => {
     await open(page, base, 'lab'); await page.click('#kzAns [data-kz="見えた"]'); await page.click('#kzLine'); assert.match(await page.textContent('#kzNote'), /補って/); await page.shot('03-lab-kanizsa');
-    await page.click('#labNext'); await page.fill('#hideGuess', '幹が続いている'); await page.click('#hideBtn'); assert.match(await page.textContent('#hideNote'), /想像/);
-    await page.click('#labNext'); for (let i = 0; i < 2; i++) await page.click('#blurBtn');
+    await page.click('#labNext'); await page.fill('#hideGuess', '幹が続いている'); await page.shot('03b-lab-hide-fog'); await page.click('#hideBtn'); assert.match(await page.textContent('#hideNote'), /想像/); await page.shot('03c-lab-hide-open');
+    await page.click('#labNext'); await page.shot('03d-lab-blur-1'); for (let i = 0; i < 2; i++) await page.click('#blurBtn');
     await page.click('#blurGot'); await page.waitForTimeout(300); assert.match(await page.textContent('#blurNote'), /3段階目/);
     assert.strictEqual(await page.locator('#blurHist .bar.mine b').textContent(), '1');
-    for (let i = 0; i < 2; i++) await page.click('#blurBtn'); assert.match(await page.textContent('#blurNote'), /ねこ/);
+    for (let i = 0; i < 2; i++) await page.click('#blurBtn'); assert.match(await page.textContent('#blurNote'), /ねこ/); await page.shot('03e-lab-blur-5');
     await page.click('#labNext'); await page.fill('#mangaGuess', 'コップが落ちた'); await page.click('#mangaGap'); assert.match(await page.textContent('#mangaNote'), /コマとコマ/);
     const sum = await page.textContent('#labSum'); for (const re of [/三角形：見えた/, /幹が続いている/, /3段階目/, /コップが落ちた/]) assert.match(sum, re);
     await page.shot('04-lab-manga');
@@ -154,6 +156,43 @@ async function localFlow(browser, base, vp, name) {
     await setRange(page, '#mistRange', 64);
     const ft = await page.evaluate(() => new Promise(r => { let n = 0, t0 = performance.now(); const f = () => { if (++n < 60) requestAnimationFrame(f); else r((performance.now() - t0) / 60); }; requestAnimationFrame(f); }));
     console.log(`     平均フレーム時間 ${ft.toFixed(1)}ms（ヘッドレス・品質 ${await page.evaluate(() => Q.level)}）`);
+  });
+
+  await step('全画面（5つの舞台・パネルが下に重なる・戻る・Escape・画面移動）', async () => {
+    const owners = await page.$$eval('.fsbtn', bs => bs.map(b => b.closest('.screen').id).sort());
+    assert.deepStrictEqual(owners, ['s-brush', 's-byobu', 's-forest', 's-real', 's-write'], '.fsbtn が5つの舞台にない');
+    await open(page, base, 'forest'); await page.waitForTimeout(500);
+    await setRange(page, '#mistRange', 0);
+    await page.click('#forestStage .fsbtn'); await page.waitForTimeout(700);
+    assert.ok(await page.evaluate(() => document.body.classList.contains('fs')), 'body に fs が付かない');
+    assert.strictEqual((await page.textContent('#forestStage .fsbtn')).trim(), 'もどる');
+    for (const sel of ['#mistRange', '#mistRec']) { const r = await rectOf(page, sel); assert.ok(r.top >= 0 && r.bottom <= vp.height && r.left >= 0 && r.right <= vp.width, `全画面で ${sel} が画面内に見えない ${JSON.stringify(r)}`); }
+    const sw = await page.$eval('#forestStage', e => e.getBoundingClientRect().width); assert.ok(Math.abs(sw - vp.width) < 1.5, `舞台の幅が画面幅と違う ${sw}`);
+    await page.waitForTimeout(500); await page.shot('08b-forest-fs-00');
+    await page.click('#forestStage .fsbtn'); await page.waitForTimeout(300);
+    assert.ok(!(await page.evaluate(() => document.body.classList.contains('fs'))), '押し直しても戻らない');
+    assert.strictEqual((await page.textContent('#forestStage .fsbtn')).trim(), '全画面');
+    await page.click('#forestStage .fsbtn'); await page.waitForTimeout(300); assert.ok(await page.evaluate(() => document.body.classList.contains('fs')));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    assert.ok(!(await page.evaluate(() => document.body.classList.contains('fs'))), 'Escape で戻らない');
+    await page.click('#forestStage .fsbtn'); await page.waitForTimeout(300);
+    await page.evaluate(() => { location.hash = '#/home'; }); await page.waitForSelector('#s-home.on', { state: 'attached' }); await page.waitForTimeout(300);
+    assert.ok(!(await page.evaluate(() => document.body.classList.contains('fs') || !!document.querySelector('.screen.fs'))), '別の画面へ移っても fs が外れない');
+  });
+
+  await step('霧を晴らした世界（遠景・道と物・同じ場所に同じもの）と松が道をよける', async () => {
+    await open(page, base, 'forest'); await page.waitForTimeout(500);
+    await setRange(page, '#mistRange', 0); await page.waitForTimeout(900);
+    const st = await page.evaluate(() => ({ spr: !!Scene.spr, house: !!(Scene.spr && Scene.spr.house), pano: !!forest.pano }));
+    assert.ok(st.spr && st.house, 'Scene.spr ができていない'); assert.ok(st.pano, 'forest.pano がない');
+    const n0 = page.errors.length;
+    await page.evaluate(() => { forest.camZ += 3; }); await page.waitForTimeout(500);
+    assert.strictEqual(page.errors.length, n0, 'camZ を進めてエラー');
+    const same = await page.evaluate(() => JSON.stringify(Scene.at(3)) === JSON.stringify(Scene.at(3)) && Scene.at(3).length > 0);
+    assert.ok(same, 'Scene.at(3) が毎回同じでない');
+    await setRange(page, '#mistRange', 70); await page.waitForTimeout(300);
+    const clear = await page.evaluate(() => forest.pines.every(p => Math.abs(p.x - pathC(p.z)) >= 0.4)); assert.ok(clear, '松が道に立っている');
+    await setRange(page, '#mistRange', 64);
   });
 
   await step('本文の要旨のたたみ方', async () => {

@@ -6,6 +6,7 @@
 <title>松林図をあるく</title>
 <meta name="description" content="原研哉『空白の意味』の授業で使う、長谷川等伯「松林図屏風」を体感するデジタル教材。霧の松林をあるき、描き込みと靄を変え、白の向こうに言葉を書く。">
 <meta name="theme-color" content="#f7f6f2">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23fffefb'/><path d='M34 58 C30 44 36 34 30 22 C28 17 29 13 31 9' fill='none' stroke='%231c1c1c' stroke-width='4.2' stroke-linecap='round'/><path d='M31 25 C24 22 17 24 11 29 M32 20 C40 15 48 16 54 20 M33 33 C40 31 46 33 51 38' fill='none' stroke='%232a2a2a' stroke-width='3' stroke-linecap='round' opacity='.85'/><ellipse cx='13' cy='29' rx='9' ry='3.4' fill='%231c1c1c' opacity='.55'/><ellipse cx='50' cy='19' rx='10' ry='3.4' fill='%231c1c1c' opacity='.6'/><ellipse cx='48' cy='38' rx='8' ry='3' fill='%231c1c1c' opacity='.4'/><path d='M8 57 H56' stroke='%231c1c1c' stroke-width='2.4' stroke-linecap='round' opacity='.35'/></svg>">
 <style>
 :root{
   --paper:#f7f6f2; --paper2:#efede7; --white:#fffefb;
@@ -127,14 +128,24 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .opts button{min-height:48px;border:1px solid var(--usuzumi);border-radius:8px;background:#fff;cursor:pointer;font-size:.78rem;line-height:1.25;padding:4px 2px;touch-action:manipulation}
 .opts button b{display:block;font-size:1.05rem}
 .opts button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
-.kake{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:stretch;margin:12px 0}
-.jiku{position:relative;width:118px;padding:14px 0}
-.jiku::before,.jiku::after{content:"";position:absolute;left:-10px;right:-10px;height:12px;border-radius:6px;background:#3a3a3a}
-.jiku::before{top:0}.jiku::after{bottom:0;left:-16px;right:-16px}
-.jiku .paper{position:relative;height:320px;border:1px solid #bbb;display:flex;flex-direction:column;overflow:visible}
-.jiku .band{flex:var(--f);display:flex;align-items:center;justify-content:center;font-size:.72rem;text-align:center;line-height:1.25;padding:0 4px}
-.jiku .mk{position:absolute;left:-14px;right:-14px;height:0;border-top:2px solid #7a2b22;z-index:2}
-.jiku .mk span{position:absolute;right:-30px;top:-.8em;font-size:.75rem;font-weight:700;color:#7a2b22;background:var(--paper);padding:0 2px}
+.kake{display:grid;grid-template-columns:auto 1fr;gap:30px;align-items:start;margin:14px 0 14px 10px}
+/* 掛け軸：八双・天・一文字・紙（中廻し）・一文字・地・軸木。布は灰色の階調で */
+.jiku{position:relative;width:120px;padding:46px 9px 60px;background:
+  repeating-linear-gradient(90deg,rgba(0,0,0,.022) 0 1px,transparent 1px 3px),
+  repeating-linear-gradient(0deg,rgba(255,255,255,.18) 0 1px,transparent 1px 3px),
+  linear-gradient(90deg,#c9c6bf,#dad7d0 12%,#dad7d0 88%,#c9c6bf);box-shadow:0 6px 14px -6px rgba(40,36,30,.45),0 0 0 1px rgba(60,56,50,.25)}
+.jiku .ichi{position:absolute;left:0;right:0;height:9px;background:linear-gradient(180deg,#a9a59c,#bdb9b0 45%,#a5a198);border-block:1px solid rgba(60,56,50,.35)}
+.jiku .ichi.t{top:30px}.jiku .ichi.b{bottom:45px}
+.jiku .hasso,.jiku .jikugi{position:absolute;height:13px;border-radius:5px;background:linear-gradient(180deg,#6a6862,#3a3935 45%,#242321);box-shadow:0 2px 3px rgba(0,0,0,.3)}
+.jiku .hasso{top:6px;left:-5px;right:-5px}
+.jiku .jikugi{bottom:-4px;left:-12px;right:-12px}
+.jiku .jikugi::before,.jiku .jikugi::after{content:"";position:absolute;top:-3px;width:11px;height:19px;border-radius:5px;background:linear-gradient(90deg,#55534e,#2a2927 60%,#1c1b1a)}
+.jiku .jikugi::before{left:-8px}.jiku .jikugi::after{right:-8px}
+.jiku .paper{position:relative;height:320px;display:flex;flex-direction:column;overflow:visible;background:var(--white);box-shadow:0 0 0 1px rgba(60,56,50,.4),inset 0 0 14px rgba(70,60,40,.22)}
+.jiku .band{--n:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .27 0 0 0 0 .22 0 0 0 .5 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");flex:var(--f);display:flex;align-items:center;justify-content:center;font-size:.72rem;text-align:center;line-height:1.25;padding:0 4px;position:relative;
+  background:var(--n),linear-gradient(180deg,color-mix(in srgb,var(--c) 90%,#fff),var(--c) 35%,color-mix(in srgb,var(--c) 92%,#000));background-color:var(--c);box-shadow:inset 0 5px 7px -5px rgba(0,0,0,.18),inset 0 -5px 7px -5px rgba(255,255,255,.2)}
+.jiku .mk{position:absolute;left:-5px;right:-5px;height:0;border-top:2px solid #7a2b22;z-index:2}
+.jiku .mk span{position:absolute;right:-24px;top:-.8em;font-size:.75rem;font-weight:700;color:#7a2b22;background:var(--paper);padding:0 2px;border-radius:2px}
 .jiku .mk.pre{border-top-style:dashed}
 .kake .desc p{margin:.2rem 0 .7rem}
 .typebox{font-size:1.1rem;font-weight:700}
@@ -169,6 +180,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .manga{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;max-width:620px}
 .manga .koma{border:2px solid var(--ink);background:#fff;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
 .manga .koma svg{width:100%;height:100%}
+.manga{position:relative}.manga .mgdefs{position:absolute;width:0;height:0}
+.manga .koma{filter:url(#mgFrame);background:#fffefb}
 .manga .koma.gap{border-style:dashed;border-color:var(--usuzumi);color:var(--sumi);font-size:.85rem;text-align:center;padding:4px}
 
 /* ---- teacher ---- */
@@ -219,6 +232,9 @@ body.hideui .coach,body.hideui .hud,body.hideui .walkpad,body.hideui .hint,body.
 .realmsg[hidden]{display:none}
 .credit{font-size:.78rem;color:var(--sumi);line-height:1.5}
 .stage.byobu{background:#ece8de;touch-action:none}
+/* 軽量表示の部屋：奥の壁・見切り・畳の床（屏風モードの3D表示と同じ色調） */
+.stage.byobu.csson{background:linear-gradient(180deg,#c9c1ab 0,#ddd6c2 30%,#d6cfba 44%,#c4bca6 45.4%,#5e5848 45.4%,#5e5848 46.6%,#d3ccb3 46.6%,#dcd5bd 70%,#cbc3a8 100%)}
+.css3d::before{content:"";position:absolute;left:0;right:0;top:46.6%;bottom:0;background:repeating-linear-gradient(0deg,rgba(75,71,61,.28) 0 2px,transparent 2px 15%),repeating-linear-gradient(90deg,rgba(75,71,61,.14) 0 1px,transparent 1px 25%),repeating-linear-gradient(0deg,rgba(110,100,70,.07) 0 1px,transparent 1px 4px)}
 .css3d{position:absolute;inset:0;overflow:hidden;perspective:900px;perspective-origin:50% 45%}
 .css3d[hidden]{display:none}
 .css3d .cam{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
@@ -366,6 +382,7 @@ body[data-flow] .journey{display:flex}
 /* ---- 全画面 ---- */
 .hud{max-width:min(72%,460px)}
 .xp .badge{top:auto;bottom:34px;left:10px}
+.xp #byMode{bottom:auto;top:10px}
 .screen.fs .badge{bottom:auto;top:max(10px,env(safe-area-inset-top))}
 @media (max-width:600px){.screen.fs .badge{top:auto;bottom:calc(190px + env(safe-area-inset-bottom))}}
 body.fs{overflow:hidden}
@@ -1783,11 +1800,11 @@ const sum = a => a ? a.reduce((s, v) => s + v, 0) : null;
 const typeOf = s => TYPES.find(t => s >= t.min && s <= t.max);
 function renderKake(el, pre, post) {
   const pos = s => ((s - 6) / 18 * 100).toFixed(1) + '%';
-  const bands = TYPES.map(t => `<div class="band" style="--f:${t.max - t.min + 1};background:${t.bg};color:${t.fg}">${t.name}<br>${t.min}〜${t.max}</div>`).join('');
+  const bands = TYPES.map(t => `<div class="band" style="--f:${t.max - t.min + 1};--c:${t.bg};color:${t.fg}">${t.name}<br>${t.min}〜${t.max}</div>`).join('');
   const mk = (s, cls, lab) => s == null ? '' : `<div class="mk ${cls}" style="top:${pos(s)}"><span>${lab}</span></div>`;
   const ps = sum(pre), qs = sum(post);
   const line = (lab, s) => s == null ? `<p>${lab}：まだ答えていません</p>` : `<p>${lab}：<span class="typebox">${s}点・${typeOf(s).name}</span><br><span class="note">${typeOf(s).text}</span></p>`;
-  el.innerHTML = `<div class="jiku" aria-hidden="true"><div class="paper">${bands}${mk(ps, 'pre', '前')}${mk(qs, 'post', '後')}</div></div>
+  el.innerHTML = `<div class="jiku" aria-hidden="true"><i class="hasso"></i><i class="ichi t"></i><i class="ichi b"></i><div class="paper">${bands}${mk(ps, 'pre', '前')}${mk(qs, 'post', '後')}</div><i class="jikugi"></i></div>
     <div class="desc">${line('前', ps)}${line('後', qs)}<p class="note"><b>どのタイプにも良し悪しはありません。</b>空白をうめたくなる気持ちも、空白に「何かが入る予兆」を感じているからこそかもしれません（145・4）。</p></div>`;
 }
 let checkWhich = 'pre', checkAns = [];
@@ -1885,35 +1902,70 @@ $('#kzLine').addEventListener('click', e => {
   $('#kzNote').textContent = on ? '赤い点線のところに、実際の線はありません。見ている人の頭が、白い三角形を「補って」います。' : '';
 });
 function drawHide() {
-  const cv = $('#hideCv'), g = cv.getContext('2d'); g.fillStyle = '#fffefb'; g.fillRect(0, 0, cv.width, cv.height);
-  const P = PINES[2]; drawPine(g, P, 0.55, 300, 140, 340, { ground: true }); drawPine(g, PINES[5], 0.75, 230, 380, 335, { ground: true });
-  if (!hideOpen) { const gr = g.createLinearGradient(0, 70, 0, 260); gr.addColorStop(0, 'rgba(255,254,251,0)'); gr.addColorStop(0.25, 'rgba(255,254,251,1)'); gr.addColorStop(0.75, 'rgba(255,254,251,1)'); gr.addColorStop(1, 'rgba(255,254,251,0)'); g.fillStyle = gr; g.fillRect(0, 70, cv.width, 190); }
+  const cv = $('#hideCv'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(Tex.paper(W, H), 0, 0, W, H);
+  /* 墨は別の透明キャンバスに描き、紙の目のかすれとにじみを与えてから紙に重ねる */
+  const t = newCanvas(W, H), tg = t.getContext('2d');
+  drawPine(tg, PINES[2], 0.55, 300, 140, 340, { ground: true }); drawPine(tg, PINES[5], 0.75, 230, 380, 335, { ground: true });
+  finishInk(t, 0.28); g.drawImage(t, 0, 0);
+  if (!hideOpen) {
+    /* 紙の色の霧。縁はやわらかく溶ける */
+    const rr = rng(88), y0 = 70, y1 = 260;
+    const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(247,244,236,0)'); gr.addColorStop(0.22, 'rgba(247,244,236,.9)'); gr.addColorStop(0.5, 'rgba(247,244,236,.97)'); gr.addColorStop(0.78, 'rgba(247,244,236,.9)'); gr.addColorStop(1, 'rgba(247,244,236,0)');
+    g.fillStyle = gr; g.fillRect(0, y0, W, y1 - y0);
+    for (let i = 0; i < 16; i++) { const x = rr() * W, y = lerp(y0 + 20, y1 - 20, rr()), rx = 70 + rr() * 90, ry = 14 + rr() * 16; g.save(); g.translate(x, y); g.scale(1, ry / rx); const q = g.createRadialGradient(0, 0, 0, 0, 0, rx); q.addColorStop(0, 'rgba(247,244,236,.55)'); q.addColorStop(1, 'rgba(247,244,236,0)'); g.fillStyle = q; g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fill(); g.restore(); }
+    /* 霧のなかのうっすらした墨の気配 */
+    const t2 = newCanvas(W, H), t2g = t2.getContext('2d'); for (let i = 0; i < 5; i++) Ink.wash(t2g, 60 + rr() * (W - 120), 120 + rr() * 110, 60 + rr() * 50, 10 + rr() * 8, 0.035);
+    g.drawImage(t2, 0, 0);
+  }
 }
 $('#hideBtn').addEventListener('click', e => { if ($('#hideGuess').value.trim()) labSet('hide', $('#hideGuess').value.trim().slice(0, 30)); hideOpen = !hideOpen; e.currentTarget.setAttribute('aria-pressed', String(hideOpen)); e.currentTarget.textContent = hideOpen ? 'もう一度隠す' : '霧を晴らす'; drawHide(); $('#hideNote').textContent = hideOpen ? '想像した松と同じでしたか？ 隠れていたあいだも、あなたの頭の中には何かが「あった」はずです。' : ''; });
 function drawCat(g, W, H) {
-  g.fillStyle = '#fffefb'; g.fillRect(0, 0, W, H); g.fillStyle = '#1c1c1c';
-  g.beginPath(); g.ellipse(W * 0.47, H * 0.7, W * 0.2, H * 0.2, 0, 0, 7); g.fill();
-  g.beginPath(); g.arc(W * 0.33, H * 0.42, H * 0.13, 0, 7); g.fill();
-  g.beginPath(); g.moveTo(W * 0.25, H * 0.36); g.lineTo(W * 0.24, H * 0.18); g.lineTo(W * 0.32, H * 0.3); g.closePath(); g.fill();
-  g.beginPath(); g.moveTo(W * 0.36, H * 0.29); g.lineTo(W * 0.43, H * 0.17); g.lineTo(W * 0.43, H * 0.35); g.closePath(); g.fill();
-  g.lineWidth = H * 0.05; g.lineCap = 'round'; g.strokeStyle = '#1c1c1c'; g.beginPath(); g.moveTo(W * 0.64, H * 0.78); g.bezierCurveTo(W * 0.85, H * 0.8, W * 0.82, H * 0.45, W * 0.7, H * 0.4); g.stroke();
-  g.fillStyle = '#fffefb'; g.beginPath(); g.arc(W * 0.29, H * 0.41, H * 0.018, 0, 7); g.arc(W * 0.37, H * 0.41, H * 0.018, 0, 7); g.fill();
+  /* 墨で描いた座りねこ（紙の地つき）。教材の創作 */
+  g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(Tex.paper(W, H), 0, 0, W, H);
+  const t = newCanvas(W, H), k = t.getContext('2d'), X = u => u * W, Y = v => v * H, P = a => a.map(p => [X(p[0]), Y(p[1])]);
+  /* 淡墨の量感 */
+  Ink.wash(k, X(0.5), Y(0.7), W * 0.2, H * 0.2, 0.36); Ink.wash(k, X(0.47), Y(0.74), W * 0.17, H * 0.14, 0.3); Ink.wash(k, X(0.34), Y(0.43), H * 0.17, H * 0.15, 0.4);
+  Ink.wash(k, X(0.7), Y(0.7), W * 0.07, H * 0.16, 0.2);
+  /* 耳の濃い塗り */
+  for (const e of [[[0.26, 0.36], [0.255, 0.2], [0.325, 0.31]], [[0.36, 0.3], [0.425, 0.19], [0.43, 0.36]]]) { k.fillStyle = ink(0.55); k.beginPath(); k.moveTo(X(e[0][0]), Y(e[0][1])); k.lineTo(X(e[1][0]), Y(e[1][1])); k.lineTo(X(e[2][0]), Y(e[2][1])); k.closePath(); k.fill(); }
+  /* 輪郭 */
+  const S = (pts, w0, w1, a, seed, dry) => Ink.stroke(k, spline(P(pts), 8), { w0, w1, a, dry: dry || 0.25, seed });
+  S([[0.27, 0.37], [0.255, 0.2], [0.325, 0.3]], 3, 2, 0.8, 3); S([[0.355, 0.3], [0.425, 0.185], [0.435, 0.36]], 3, 2, 0.8, 4);
+  S([[0.255, 0.37], [0.235, 0.44], [0.27, 0.54], [0.34, 0.56], [0.41, 0.52], [0.44, 0.44], [0.435, 0.37]], 4, 3, 0.75, 5, 0.3);
+  S([[0.43, 0.43], [0.5, 0.45], [0.6, 0.55], [0.66, 0.7], [0.65, 0.84]], 6, 4, 0.8, 6, 0.4);
+  S([[0.27, 0.56], [0.25, 0.7], [0.26, 0.84], [0.3, 0.88]], 5, 3, 0.8, 7, 0.35);
+  S([[0.3, 0.88], [0.44, 0.9], [0.56, 0.89], [0.65, 0.85]], 7, 4, 0.85, 8, 0.5);
+  S([[0.3, 0.6], [0.31, 0.72], [0.31, 0.88]], 2.5, 2, 0.5, 9);
+  /* しっぽ */
+  S([[0.65, 0.85], [0.78, 0.88], [0.86, 0.76], [0.82, 0.55], [0.74, 0.5]], 9, 3, 0.85, 10, 0.55);
+  /* ひげ */
+  for (const [x, y, dx, dy] of [[0.27, 0.47, -0.12, -0.02], [0.27, 0.49, -0.12, 0.03], [0.4, 0.47, 0.12, -0.02], [0.4, 0.49, 0.12, 0.03]]) Ink.line(k, [[X(x), Y(y)], [X(x + dx * 0.5), Y(y + dy * 0.4)], [X(x + dx), Y(y + dy)]], 0.9, 0.5);
+  /* 鼻と口 */
+  Ink.line(k, [[X(0.325), Y(0.465)], [X(0.335), Y(0.478)], [X(0.345), Y(0.465)]], 1.6, 0.7);
+  /* 目は紙の白を残す */
+  finishInk(t, 0.3);
+  g.drawImage(t, 0, 0);
+  g.fillStyle = 'rgba(247,244,236,.96)'; for (const x of [0.29, 0.375]) { g.beginPath(); g.ellipse(X(x), Y(0.41), H * 0.022, H * 0.016, 0, 0, 7); g.fill(); }
+  g.fillStyle = ink(0.85); for (const x of [0.29, 0.375]) { g.beginPath(); g.ellipse(X(x), Y(0.41), H * 0.006, H * 0.013, 0, 0, 7); g.fill(); }
 }
 function drawBlur() {
   const cv = $('#blurCv'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
   const src = newCanvas(W, H); drawCat(src.getContext('2d'), W, H);
   const f = BLUR[blurLv]; const sm = newCanvas(W / f, H / f); sm.getContext('2d').drawImage(src, 0, 0, sm.width, sm.height);
-  g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H); g.drawImage(sm, 0, 0, W, H);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.fillStyle = '#f6f3ea'; g.fillRect(0, 0, W, H); g.drawImage(sm, 0, 0, W, H);
   $('#blurStep').textContent = `はっきり度 ${blurLv + 1}/${BLUR.length}`;
   $('#blurBtn').textContent = blurLv >= BLUR.length - 1 ? 'もう一度ぼかす' : '少しはっきりさせる';
   $('#blurNote').textContent = blurLv >= BLUR.length - 1 ? '答えは「すわっているねこ」。ぼんやりしたかたちのときから、もう何かに「見立てて」いませんでしたか。' : '';
 }
 $('#blurBtn').addEventListener('click', () => { blurLv = blurLv >= BLUR.length - 1 ? 0 : blurLv + 1; drawBlur(); });
 function buildManga() {
-  const k1 = `<svg viewBox="0 0 90 120" aria-label="1コマ目：机の端のコップと、ねこの前足"><line x1="0" y1="78" x2="62" y2="78" stroke="#1c1c1c" stroke-width="2"/><line x1="8" y1="78" x2="8" y2="120" stroke="#1c1c1c" stroke-width="2"/><path d="M44 54 L60 54 L58 78 L46 78 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><path d="M60 60 q7 2 0 10" fill="none" stroke="#1c1c1c" stroke-width="2"/><circle cx="80" cy="46" r="12" fill="#1c1c1c"/><path d="M71 38 L72 26 L78 35 Z M82 34 L88 26 L89 38 Z" fill="#1c1c1c"/><ellipse cx="66" cy="62" rx="7" ry="4" fill="#1c1c1c"/><path d="M70 60 L80 54" stroke="#1c1c1c" stroke-width="5" stroke-linecap="round"/></svg>`;
-  const k2 = `<svg viewBox="0 0 90 120" aria-label="3コマ目：床に割れたコップと、知らんぷりのねこ"><line x1="0" y1="104" x2="90" y2="104" stroke="#1c1c1c" stroke-width="2"/><path d="M20 104 l6 -9 l5 9 Z M36 104 l3 -6 l7 4 Z M48 103 l8 -5 l2 6 Z M14 101 l-4 -4" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><circle cx="68" cy="56" r="11" fill="#1c1c1c"/><path d="M60 49 L61 38 L67 46 Z M70 45 L76 38 L77 50 Z" fill="#1c1c1c"/><ellipse cx="70" cy="84" rx="13" ry="18" fill="#1c1c1c"/><text x="40" y="30" font-size="12" fill="#1c1c1c">…</text></svg>`;
-  const mid = `<svg viewBox="0 0 90 120" aria-label="あいだのコマ：コップが落ちる"><line x1="0" y1="40" x2="40" y2="40" stroke="#1c1c1c" stroke-width="2"/><g transform="rotate(35 50 70)"><path d="M42 58 L58 58 L56 82 L44 82 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/></g><path d="M30 50 q-4 10 0 22 M24 56 q-3 8 0 16" stroke="#1c1c1c" fill="none"/><text x="8" y="112" font-size="15" font-weight="700" fill="#1c1c1c">ガシャーン</text></svg>`;
-  $('#manga').innerHTML = `<div class="koma">${k1}</div><button type="button" class="koma gap" id="mangaGap">ここで<br>何が？<br>（タップ）</button><div class="koma">${k2}</div>`;
+  const k1 = `<svg viewBox="0 0 90 120" style="filter:url(#mgWob)" aria-label="1コマ目：机の端のコップと、ねこの前足"><line x1="0" y1="78" x2="62" y2="78" stroke="#1c1c1c" stroke-width="2"/><line x1="8" y1="78" x2="8" y2="120" stroke="#1c1c1c" stroke-width="2"/><path d="M44 54 L60 54 L58 78 L46 78 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><path d="M60 60 q7 2 0 10" fill="none" stroke="#1c1c1c" stroke-width="2"/><circle cx="80" cy="46" r="12" fill="#1c1c1c"/><path d="M71 38 L72 26 L78 35 Z M82 34 L88 26 L89 38 Z" fill="#1c1c1c"/><ellipse cx="66" cy="62" rx="7" ry="4" fill="#1c1c1c"/><path d="M70 60 L80 54" stroke="#1c1c1c" stroke-width="5" stroke-linecap="round"/></svg>`;
+  const k2 = `<svg viewBox="0 0 90 120" style="filter:url(#mgWob)" aria-label="3コマ目：床に割れたコップと、知らんぷりのねこ"><line x1="0" y1="104" x2="90" y2="104" stroke="#1c1c1c" stroke-width="2"/><path d="M20 104 l6 -9 l5 9 Z M36 104 l3 -6 l7 4 Z M48 103 l8 -5 l2 6 Z M14 101 l-4 -4" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><circle cx="68" cy="56" r="11" fill="#1c1c1c"/><path d="M60 49 L61 38 L67 46 Z M70 45 L76 38 L77 50 Z" fill="#1c1c1c"/><ellipse cx="70" cy="84" rx="13" ry="18" fill="#1c1c1c"/><text x="40" y="30" font-size="12" fill="#1c1c1c">…</text></svg>`;
+  const mid = `<svg viewBox="0 0 90 120" style="filter:url(#mgWob)" aria-label="あいだのコマ：コップが落ちる"><line x1="0" y1="40" x2="40" y2="40" stroke="#1c1c1c" stroke-width="2"/><g transform="rotate(35 50 70)"><path d="M42 58 L58 58 L56 82 L44 82 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/></g><path d="M30 50 q-4 10 0 22 M24 56 q-3 8 0 16" stroke="#1c1c1c" fill="none"/><text x="8" y="112" font-size="15" font-weight="700" fill="#1c1c1c">ガシャーン</text></svg>`;
+  /* 手描きの揺らぎ：線用（mgWob）と枠用（mgFrame）。幾何学の錯視（カニッツァ）には使わない */
+  const defs = `<svg class="mgdefs" width="0" height="0" aria-hidden="true" focusable="false"><defs><filter id="mgWob" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".06" numOctaves="2" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.4" xChannelSelector="R" yChannelSelector="G"/></filter><filter id="mgFrame" x="-3%" y="-3%" width="106%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter></defs></svg>`;
+  $('#manga').innerHTML = defs + `<div class="koma">${k1}</div><button type="button" class="koma gap" id="mangaGap">ここで<br>何が？<br>（タップ）</button><div class="koma">${k2}</div>`;
   $('#mangaGap').addEventListener('click', e => { const b = e.currentTarget; if (b.dataset.open) { buildManga(); $('#mangaNote').textContent = ''; return; } if ($('#mangaGuess').value.trim()) labSet('manga', $('#mangaGuess').value.trim().slice(0, 30)); b.dataset.open = '1'; b.classList.remove('gap'); b.innerHTML = mid; $('#mangaNote').textContent = 'マンガでは、コマとコマの間の「描かれていない時間」を読者が補っています。描かないことで、読者の想像が動きだします。'; });
 }
 
@@ -2299,9 +2351,27 @@ const Byobu = {
     this.cam = new THREE.PerspectiveCamera(38, 1, 0.05, 60);
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.62));
     const dl = new THREE.DirectionalLight(0xfff6e8, 0.55); dl.position.set(-4, 5, 6); this.scene.add(dl);
-    /* 畳の床と、屏風の足もとの淡い影 */
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshLambertMaterial({ color: 0xd9d1bb }));
+    /* 畳の床（縁のある畳の目）・奥の土壁・見切り。屏風が主役なので控えめに、霧と同じ色調で */
+    const tc = newCanvas(512, 256), tg = tc.getContext('2d'), tr = rng(2024);
+    tg.fillStyle = '#d6cfb6'; tg.fillRect(0, 0, 512, 256);
+    for (let y = 14; y < 242; y += 2) { tg.fillStyle = tr() < 0.5 ? 'rgba(120,110,80,.10)' : 'rgba(255,255,245,.10)'; tg.fillRect(0, y, 512, 1); }
+    for (let i = 0; i < 300; i++) { tg.fillStyle = `rgba(110,100,70,${0.03 + tr() * 0.05})`; tg.fillRect(tr() * 512, 14 + tr() * 228, 4 + tr() * 20, 1); }
+    tg.fillStyle = '#6b665a'; tg.fillRect(0, 0, 512, 7); tg.fillRect(0, 249, 512, 7);
+    tg.fillStyle = 'rgba(255,255,245,.18)'; tg.fillRect(0, 7, 512, 2); tg.fillStyle = 'rgba(60,50,30,.18)'; tg.fillRect(0, 9, 512, 2); tg.fillRect(0, 245, 512, 2);
+    tg.fillStyle = 'rgba(70,62,44,.28)'; tg.fillRect(0, 0, 2, 256); tg.fillRect(510, 0, 2, 256);
+    const tatami = this.tatamiTex = new THREE.CanvasTexture(tc);
+    tatami.wrapS = tatami.wrapT = THREE.RepeatWrapping; tatami.repeat.set(40 / 1.8, 24 / 0.9); tatami.encoding = THREE.sRGBEncoding; tatami.anisotropy = 4;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshLambertMaterial({ map: tatami }));
     floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
+    const wc = newCanvas(8, 256), wg = wc.getContext('2d'), wgr = wg.createLinearGradient(0, 0, 0, 256);
+    wgr.addColorStop(0, '#c9c1ab'); wgr.addColorStop(0.45, '#ddd6c2'); wgr.addColorStop(0.9, '#d6cfba'); wgr.addColorStop(1, '#c4bca6');
+    wg.fillStyle = wgr; wg.fillRect(0, 0, 8, 256);
+    const wallTex = new THREE.CanvasTexture(wc); wallTex.encoding = THREE.sRGBEncoding;
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(40, 4.2), new THREE.MeshBasicMaterial({ map: wallTex }));
+    wall.position.set(0, 2.1, -2.6); this.scene.add(wall);
+    const mitsuke = new THREE.Mesh(new THREE.BoxGeometry(40, 0.09, 0.05), new THREE.MeshLambertMaterial({ color: 0x5e5848 }));
+    mitsuke.position.set(0, 0.045, -2.57); this.scene.add(mitsuke);
+    /* 屏風の足もとの淡い影 */
     const sh = newCanvas(64, 64), sg = sh.getContext('2d'), gr = sg.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); sg.fillStyle = gr; sg.fillRect(0, 0, 64, 64);
     this.shadowTex = new THREE.CanvasTexture(sh);
     this.mats = { left: new THREE.MeshLambertMaterial({ color: 0xffffff }), right: new THREE.MeshLambertMaterial({ color: 0xffffff }) };
@@ -2327,7 +2397,7 @@ const Byobu = {
     this.layout = L;
   },
   initCss() {
-    $('#byobuCv').hidden = true; $('#byobuCss').hidden = false;
+    $('#byobuCv').hidden = true; $('#byobuCss').hidden = false; $('#byobuStage').classList.add('csson');
     const cam = $('#byobuCam'); cam.innerHTML = '';
     for (let i = 0; i < 12; i++) { const d = document.createElement('div'); d.className = 'pnl'; cam.appendChild(d); }
     this.buildCss();
