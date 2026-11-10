@@ -364,6 +364,8 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;background:var(--ink)
 body[data-flow] .journey{display:flex}
 .journey .jb{min-height:42px;min-width:44px;padding:0 14px;border-radius:999px;border:1px solid rgba(0,0,0,.2);background:#fff;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;white-space:nowrap}
 .journey .jb.next{background:var(--ink);color:#fff;border-color:var(--ink)}
+.journey .jb.next.wait{background:#fff;color:var(--ink);border-color:rgba(0,0,0,.25)}
+.journey .jb.next{transition:background .3s,color .3s}
 .journey .jb[aria-disabled=true]{opacity:.3;pointer-events:none}
 .journey ol{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;list-style:none;margin:0;padding:0}
 .journey ol a{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--usuzumi);font-size:.72rem;text-decoration:none;color:var(--sumi);transition:all .25s var(--ease)}
@@ -379,6 +381,22 @@ body[data-flow] .journey{display:flex}
 .toast{position:fixed;left:50%;bottom:calc(var(--foot) + 18px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:70;background:rgba(28,28,28,.92);color:#fff;padding:10px 20px;border-radius:999px;font-size:.9rem;letter-spacing:.05em;opacity:0;pointer-events:none;transition:opacity .25s,transform .35s var(--ease);max-width:calc(100vw - 32px);text-align:center}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
+.hempty{grid-column:1/-1;align-self:center;text-align:center;margin:0;font-size:.82rem;color:var(--usuzumi);letter-spacing:.08em}
+.qs li.ans.ans{opacity:1}
+.qs li p{font-size:1.02rem;margin-bottom:10px}
+.opts{gap:8px}
+.opts button{min-height:54px;border-radius:14px;background:#fff}
+.opts button b{font-size:1.25rem;font-weight:700}
+.opts button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.ends{display:flex;justify-content:space-between;font-size:.74rem;color:var(--sumi);margin-top:6px;letter-spacing:.04em}
+.hist .bar.mine i,.hist5 .bar.mine i{background:var(--ink);box-shadow:none}
+.hist .bar.mine b,.hist5 .bar.mine b{color:var(--ink);font-weight:700}
+.hist .bar.mine::after,.hist5 .bar.mine::after{content:"";position:absolute;left:50%;bottom:-9px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#7a2b22}
+.note code{overflow-wrap:anywhere;font-size:.9em}
+.fsbtn{width:38px;padding:0;justify-content:center}
+.fsbtn svg{width:18px;height:18px;display:block}
+details.about{margin-top:1.6rem}
+details.about summary{cursor:pointer;color:var(--sumi);font-size:.88rem;min-height:40px;display:flex;align-items:center}
 /* ---- 全画面 ---- */
 .hud{max-width:min(72%,460px)}
 .xp .badge{top:auto;bottom:34px;left:10px}
@@ -468,8 +486,11 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <a href="#/byobu" class="fold" style="background-image:url(assets/thumb-byobu.jpg)"><span>屏風モード<small>折って立てた屏風を 3D で</small></span></a>
   </div>
 
-  <p class="note" style="margin-top:1.6rem">霧の松林・描き込みスライダーの松・霧・霊峰は、松林図をもとに筆の打ち込みを重ねてプログラムで描いた<strong>独自の水墨風の絵</strong>です。本物は「実物を見る」（ColBase の公開画像）と、教科書 p.146〜147 の図版で見比べてください。</p>
-  <p class="note">名前やメールアドレスは集めません。書いた言葉と選んだ値は、この端末と（設定されていれば）クラスの共有シートにだけ保存されます。 ／ <a href="#/teacher">教員用</a></p>
+  <details class="about"><summary>この教材について</summary>
+    <p class="note">霧の松林・描き込みスライダーの松・霧・霊峰は、松林図をもとに筆の打ち込みを重ねてプログラムで描いた<strong>独自の水墨風の絵</strong>です。本物は「実物を見る」（ColBase の公開画像）と、教科書 p.146〜147 の図版で見比べてください。</p>
+    <p class="note">名前やメールアドレスは集めません。書いた言葉と選んだ値は、この端末と（設定されていれば）クラスの共有シートにだけ保存されます。</p>
+  </details>
+  <p class="note"><a href="#/teacher">教員用</a></p>
 </section>
 
 <!-- ============ うめたい度チェック ============ -->
@@ -529,7 +550,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <div class="card labsum" id="labSum" hidden></div>
   </div>
 
-  <div class="row"><button class="btn" id="labPrev">← 前へ</button><button class="btn primary" id="labNext">次へ →</button></div>
+  <div class="row"><button class="btn" id="labPrev">← 前の実験</button><button class="btn" id="labNext">次の実験 →</button></div>
   <details class="think"><summary>本文につなげる</summary><p>どの体験でも、見る側は描かれていない部分を自分で補っていた。本文 149・2 では、破墨の荒い筆の松を見るとき、見る側が「未発の景観」を補完すると述べている。</p></details>
 </section>
 
@@ -566,8 +587,8 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
       <div class="badge" id="overBadge" hidden>靄 0：すべてを描き込んだ絵</div>
       <div class="hud">
         <button class="chip" id="soundBtn" aria-pressed="false">松風 オフ</button>
-        <button class="chip" id="autoBtn" aria-pressed="false">ゆっくり歩く</button>
-        <button class="chip" id="hideBtn2" title="H キーでも切り替え。画面をタップすると戻ります">文字を隠す</button>
+        <button class="chip" id="autoBtn" aria-pressed="false" aria-label="ゆっくり自動で歩く">自動</button>
+        <button class="chip" id="hideBtn2" title="H キーでも切り替え。画面をタップすると戻ります" aria-label="文字を隠す">隠す</button>
       </div>
       <div class="walkpad">
         <button class="pad" id="walkF" aria-label="奥へ進む">▲<span class="sr">奥へ</span></button>
@@ -1022,8 +1043,7 @@ const Tex = {
     /* 繊維 */
     g.lineCap = 'round';
     for (let i = 0; i < Math.round(w * h / 900); i++) { const x = r() * w, y = r() * h, a = r() * 6.3, l = 4 + r() * 20; g.strokeStyle = r() < 0.6 ? `rgba(120,105,80,${0.03 + r() * 0.06})` : `rgba(255,255,255,${0.2 + r() * 0.3})`; g.lineWidth = 0.4 + r() * 0.7; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * l * 0.5 + (r() - 0.5) * 8, y + Math.sin(a) * l * 0.5 + (r() - 0.5) * 8, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
-    /* 紙の継ぎ目（うっすら） */
-    g.fillStyle = 'rgba(120,105,80,.045)'; for (const f of [0.34, 0.68]) g.fillRect(0, Math.round(h * (f + (r() - 0.5) * 0.04)), w, 1);
+    /* （紙の継ぎ目は描かない。舞台を横切る線に見えるため） */
     /* 周りをわずかに沈める */
     const vg = g.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.35, w / 2, h / 2, Math.hypot(w, h) * 0.62); vg.addColorStop(0, 'rgba(120,105,80,0)'); vg.addColorStop(1, 'rgba(120,105,80,.11)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
     this._paper.set(key, c); return c;
@@ -1195,6 +1215,7 @@ const Scene = {
         W(0.55, 0.5, 0.45, 0.1, 0.12);
         for (let i = 0; i < 64; i++) { const x = 0.12 + r() * 0.86, a = -Math.PI / 2 + (x - 0.55) * 1.6 + (r() - 0.5) * 0.5, l = 0.1 + r() * 0.3 * (1 - Math.abs(x - 0.55) * 1.2); L([[x, 0.57], [x + Math.cos(a) * l * 0.5, 0.57 + Math.sin(a) * l * 0.55], [x + Math.cos(a) * l, 0.57 + Math.sin(a) * l]], 0.6, 0.45 + r() * 0.4); }
       }),
+      earth: mk(1.8, 0.3, 0.03, ({ B, W }, r) => { W(0.9, 0.2, 0.8, 0.07, 0.1); for (let i = 0; i < 4; i++) { const y = 0.1 + i * 0.05 + r() * 0.02, x0 = 0.05 + r() * 0.5, x1 = x0 + 0.5 + r() * 0.7; B([[x0, y], [(x0 + x1) / 2, y + (r() - 0.5) * 0.03], [Math.min(1.75, x1), y + 0.01]], 2.4 + r() * 2, 0.4 + r() * 0.25, 0.7, i + 3); } }),
       tuft: mk(0.4, 0.3, 0.036, ({ L }, r) => { for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * 0.3 + (r() - 0.5) * 0.2, l = 0.14 + r() * 0.1; L([[0.2, 0.28], [0.2 + Math.cos(a) * l * 0.5, 0.28 + Math.sin(a) * l * 0.6], [0.2 + Math.cos(a) * l * 1.1, 0.28 + Math.sin(a) * l]], 1.2, 0.75); } }),
     };
   },
@@ -1206,6 +1227,7 @@ const Scene = {
     const off = { house: 0.72, house2: 0.8, lantern: 0.13, traveler: -0.12, rocks: 0.36, sign: 0.12, fence: 0.2, bush: 0.3 }[kind];
     const list = [{ kind, z, side, x: pathC(z) + side * (PATH_HW + off) }];
     const z2 = z + 0.5 + hash(n * 11) * 0.5; list.push({ kind: hash(n * 13) < 0.5 ? 'bush' : 'rocks', z: z2, side: -side, x: pathC(z2) - side * (PATH_HW + 0.25 + hash(n * 17) * 0.5) });
+    for (let q = 0; q < 3; q++) { const zq = (n + hash(n * 19 + q)) * 1.6, sd = hash(n * 23 + q) < 0.5 ? -1 : 1; list.push({ kind: hash(n * 29 + q) < 0.6 ? 'bush' : 'rocks', z: zq, side: sd, x: pathC(zq) + sd * (PATH_HW + 0.7 + hash(n * 31 + q) * 2.4) }); }
     if (kind === 'house' || kind === 'house2') { const z3 = z - 0.25; list.push({ kind: 'fence', z: z3, side, x: pathC(z3) + side * (PATH_HW + 0.2) }); }
     this.cache.set(n, list); return list;
   },
@@ -1441,21 +1463,32 @@ class Forest {
     const vis = dz => Math.min(1, 1.1 * Math.exp(-k * Math.max(0, dz - 0.9)));
     const N = 36, L = [], Rr = [];
     for (let i = 0; i <= N; i++) { const dz = 0.28 * Math.pow(this.far / 0.28, i / N), z = camZ + dz, s = f / dz, c = pathC(z), hw = PATH_HW * (1 + 0.16 * Math.sin(z * 2.7)), y = hz + eye * s; L.push([W / 2 + (c - hw - camX) * s, y, dz, s]); Rr.push([W / 2 + (c + hw + 0.05 * Math.sin(z * 1.9) - camX) * s, y, dz, s]); }
+    /* 道の両わきの土手：外へ向かって消える淡墨で、道を一段低く見せる */
+    for (const [E, sgn] of [[L, -1], [Rr, 1]]) { g.fillStyle = ink(0.1); g.beginPath(); E.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); for (let i = N; i >= 0; i--) g.lineTo(E[i][0] + sgn * E[i][3] * 0.05, E[i][1] - E[i][3] * 0.004); g.closePath(); g.fill(); }
     g.fillStyle = 'rgba(251,249,244,1)'; g.beginPath(); L.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); for (let i = N; i >= 0; i--) g.lineTo(Rr[i][0], Rr[i][1]); g.closePath(); g.fill();
     g.lineCap = 'round'; g.strokeStyle = ink(0.86);
     for (const E of [L, Rr]) for (let i = 0; i < N; i++) { const a = E[i], b = E[i + 1]; if (a[1] > H + 40 && b[1] > H + 40) continue; g.globalAlpha = A * vis(a[2]) * 0.62; g.lineWidth = clamp(a[3] * 0.0045, 0.6, 2); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+    /* 轍：とぎれとぎれの二本の筋 */
+    g.strokeStyle = ink(0.5);
+    for (const fr of [0.3, 0.7]) for (let i = 0; i < N; i++) { if (hash(i * 3 + fr * 10 + Math.floor(camZ * 2)) < 0.35) continue; const a0 = L[i], a1 = L[i + 1], b0 = Rr[i], b1 = Rr[i + 1]; g.globalAlpha = A * vis(a0[2]) * 0.3; g.lineWidth = clamp(a0[3] * 0.003, 0.5, 1.4); g.beginPath(); g.moveTo(lerp(a0[0], b0[0], fr), a0[1]); g.lineTo(lerp(a1[0], b1[0], fr), a1[1]); g.stroke(); }
     /* 敷石 */
     for (let m = Math.ceil((camZ + 0.36) / 0.4), m1 = Math.floor((camZ + this.far * 0.75) / 0.4); m <= m1; m++) {
       const z = m * 0.4, dz = z - camZ, s = f / dz, x = W / 2 + (pathC(z) + (hash(m) * 1.5 - 0.75) * PATH_HW - camX) * s, y = hz + eye * s, rx = s * (0.02 + 0.022 * hash(m + 9.5));
       g.globalAlpha = A * vis(dz) * 0.7; g.lineWidth = clamp(s * 0.0035, 0.5, 1.8); g.fillStyle = ink(0.07); g.beginPath(); g.ellipse(x, y, rx, rx * 0.34, 0, 0, 7); g.fill(); g.stroke();
     }
-    /* 草 */
-    Scene.ensure(); const tu = Scene.spr.tuft, stepX = Q.level ? 0.7 : 1.2;
-    for (let zi = Math.ceil((camZ + 0.4) / 0.5), z1 = Math.floor((camZ + 5.5) / 0.5); zi <= z1; zi++) for (let xi = Math.floor((camX - this.X * 1.3) / stepX), x1 = Math.ceil((camX + this.X * 1.3) / stepX); xi <= x1; xi++) {
-      const z = (zi + 0.8 * hash(zi * 131 + xi * 17)) * 0.5, x = (xi + hash(zi * 57 + xi * 91)) * stepX, dz = z - camZ; if (dz < 0.36 || Math.abs(x - pathC(z)) < PATH_HW + 0.07) continue;
-      const s = f / dz, dh = tu.wh * s * (0.8 + hash(zi + xi * 3.3) * 0.6), dw = dh * tu.w / tu.h; g.globalAlpha = A * vis(dz) * 0.85; g.drawImage(tu.c, W / 2 + (x - camX) * s - dw / 2, hz + eye * s - dh * 0.93, dw, dh);
+    /* 草と、土の筆あと。道ばたには草を並べる */
+    Scene.ensure(); const tu = Scene.spr.tuft, ea = Scene.spr.earth, stepX = [1.2, 0.8, 0.6][Q.level], stepZ = 0.42;
+    for (let zi = Math.ceil((camZ + 0.4) / stepZ), z1 = Math.floor((camZ + 6) / stepZ); zi <= z1; zi++) for (let xi = Math.floor((camX - this.X * 1.3) / stepX), x1 = Math.ceil((camX + this.X * 1.3) / stepX); xi <= x1; xi++) {
+      const z = (zi + 0.8 * hash(zi * 131 + xi * 17)) * stepZ, x = (xi + hash(zi * 57 + xi * 91)) * stepX, dz = z - camZ; if (dz < 0.36 || Math.abs(x - pathC(z)) < PATH_HW + 0.09) continue;
+      const s = f / dz, sp = hash(zi * 7 + xi * 13) < 0.34 ? ea : tu, dh = sp.wh * s * (0.8 + hash(zi + xi * 3.3) * 0.7), dw = dh * sp.w / sp.h; g.globalAlpha = A * vis(dz) * (sp === ea ? 0.7 : 0.9); g.drawImage(sp.c, W / 2 + (x - camX) * s - dw / 2, hz + eye * s - dh * 0.93, dw, dh);
     }
-    g.globalAlpha = A * 0.55; Ink.line(g, [[0, hz], [W, hz]], 1, 0.6);
+    for (let m = Math.ceil((camZ + 0.38) / 0.3), m1 = Math.floor((camZ + 6.5) / 0.3); m <= m1; m++) for (const sgn of [-1, 1]) {
+      if (hash(m * 5 + sgn) < 0.3) continue;
+      const z = m * 0.3 + hash(m * 9 + sgn) * 0.2, dz = z - camZ; if (dz < 0.36) continue; const s = f / dz, hw = PATH_HW * (1 + 0.16 * Math.sin(z * 2.7)), x = pathC(z) + sgn * (hw + 0.035 + hash(m * 11 + sgn) * 0.05) + (sgn > 0 ? 0.05 * Math.sin(z * 1.9) : 0);
+      const dh = tu.wh * s * (1 + hash(m * 13 + sgn) * 0.7), dw = dh * tu.w / tu.h; g.globalAlpha = A * vis(dz) * 0.9; g.drawImage(tu.c, W / 2 + (x - camX) * s - dw / 2, hz + eye * s - dh * 0.93, dw, dh);
+    }
+    /* 地平は線を引かず、淡い墨の帯でなじませる */
+    const hb = g.createLinearGradient(0, hz - 3, 0, hz + H * 0.05); hb.addColorStop(0, ink(0)); hb.addColorStop(0.3, ink(0.16)); hb.addColorStop(1, ink(0)); g.globalAlpha = A; g.fillStyle = hb; g.fillRect(0, hz - 3, W, H * 0.05 + 3);
     g.globalAlpha = 1;
   }
   wordSprite(w, size) {
@@ -1697,13 +1730,14 @@ window.addEventListener('storage', e => { if (e.key && e.key.startsWith('kuuhaku
 
 function renderHist(el, bins, mine) {
   bins = bins || Array(10).fill(0);
-  const max = Math.max(1, ...bins), mb = mine == null ? -1 : Math.min(9, Math.floor(mine / 10));
+  const max = Math.max(3, ...bins), mb = mine == null ? -1 : Math.min(9, Math.floor(mine / 10));
+  if (!bins.some(Boolean)) { el.innerHTML = '<p class="hempty">まだ記録がありません</p>'; return; }
   el.innerHTML = bins.map((n, i) => { const h = (n / max * 100).toFixed(1) + '%'; return `<div class="bar${i === mb ? ' mine' : ''}" style="--h:${h}" aria-label="${i * 10}〜${i === 9 ? 100 : i * 10 + 9}：${n}人"><i style="height:${h}"></i><b>${n || ''}</b></div>`; }).join('');
 }
 function updateShareNotes() {
   const t = Share.mode === 'gas' ? `共有：${Share.label()}（約${CONFIG.POLL_MS / 1000}秒ごとに更新）` : '共有：端末内のみ（この端末の記録だけが表示されます。共有するには教員が GAS を設定します）';
   $$('[data-share-note]').forEach(e => e.textContent = t);
-  const pill = Share.mode === 'gas' ? '<span class="mode-pill gas">共有</span>' : '<span class="mode-pill">端末内</span>';
+  const pill = Share.mode === 'gas' ? '<span class="mode-pill gas">共有</span>' : '';
   $('#shareStatus').innerHTML = `${pill} ${esc(Share.label())}${Share.mode === 'gas' && !Share.cls ? '。クラスコードを入れてください。' : ''}`;
 }
 
@@ -1784,13 +1818,14 @@ let toastT = null;
 function toast(msg, ms = 2200) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); }
 /* 全画面：舞台を画面いっぱいに広げる。ブラウザの全画面が使えない端末（iPhone など）でも、ページ内で広げる */
 let fsNative = false;
+const fsIcon = on => `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${on ? 'M7.5 3v4.5H3M12.5 3v4.5H17M7.5 17v-4.5H3M12.5 17v-4.5H17' : 'M3 7.5V3h4.5M17 7.5V3h-4.5M3 12.5V17h4.5M17 12.5V17h-4.5'}"/></svg><span class="sr">${on ? 'もどる' : '全画面'}</span>`;
 function setFs(on) {
   const sec = $('#s-' + current); if (!sec || !sec.classList.contains('xp')) on = false;
   $$('.screen.fs').forEach(x => x.classList.remove('fs'));
   document.body.classList.toggle('fs', !!on);
   if (on) { sec.classList.add('fs'); const el = document.documentElement; if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); }
   else if (document.fullscreenElement && fsNative) document.exitFullscreen().catch(() => {});
-  $$('.fsbtn').forEach(b => { b.textContent = on ? 'もどる' : '全画面'; b.setAttribute('aria-pressed', String(!!on)); });
+  $$('.fsbtn').forEach(b => { b.innerHTML = fsIcon(on); b.setAttribute('aria-pressed', String(!!on)); });
   const again = () => { const sc = Screens[current]; if (sc && sc.resize) sc.resize(); };
   setTimeout(again, 60); setTimeout(again, 400);
 }
@@ -1798,7 +1833,7 @@ document.addEventListener('fullscreenchange', () => { if (document.fullscreenEle
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs')) setFs(false); });
 $$('.xp .stage').forEach(st => {
   let hud = st.querySelector('.hud'); if (!hud) { hud = document.createElement('div'); hud.className = 'hud'; st.appendChild(hud); }
-  const b = document.createElement('button'); b.className = 'chip fsbtn'; b.type = 'button'; b.textContent = '全画面'; b.setAttribute('aria-pressed', 'false'); hud.appendChild(b);
+  const b = document.createElement('button'); b.className = 'chip fsbtn'; b.type = 'button'; b.innerHTML = fsIcon(false); b.setAttribute('aria-pressed', 'false'); hud.appendChild(b);
   b.addEventListener('pointerdown', e => e.stopPropagation());
   b.addEventListener('click', e => { e.stopPropagation(); setFs(!document.body.classList.contains('fs')); });
 });
@@ -1810,7 +1845,7 @@ function renderJourney(sc, arg) {
   const done = trailDone(), href = k => '#/' + TRAIL[k][0];
   $('#journey').innerHTML = `<a class="jb" href="${i ? href(i - 1) : '#/home'}" aria-label="${i ? '前へ：' + TRAIL[i - 1][2] : '目次へ'}">‹</a>
     <ol>${TRAIL.map((t, k) => `<li class="${k === i ? 'cur' : done[t[0]] ? 'done' : ''}"><a href="${href(k)}" aria-label="${t[2]}"${k === i ? ' aria-current="step"' : ''}>${t[1]}</a></li>`).join('')}</ol>
-    <a class="jb next" href="${i < 5 ? href(i + 1) : '#/home'}">${i < 5 ? 'つぎへ ›' : '目次へ'}</a>`;
+    <a class="jb next${done[TRAIL[i][0]] ? '' : ' wait'}" href="${i < 5 ? href(i + 1) : '#/home'}">${i < 5 ? 'つぎへ ›' : '目次へ'}</a>`;
 }
 
 /* ---------- 授業モード ---------- */
@@ -1845,7 +1880,7 @@ Screens.check = {
     checkWhich = arg === 'post' ? 'post' : 'pre';
     checkAns = (Store.d[checkWhich] || []).slice(); while (checkAns.length < 6) checkAns.push(0);
     $('#checkTitle').textContent = `空白うめたい度チェック（${checkWhich === 'pre' ? '前' : '後'}）`;
-    $('#checkList').innerHTML = CHECK_Q.map((q, i) => `<li><p>${q}</p><div class="opts" role="group" aria-label="${esc(q)}">${OPT.map((o, k) => `<button type="button" data-q="${i}" data-v="${k + 1}" aria-pressed="${checkAns[i] === k + 1}"><b>${k + 1}</b>${o}</button>`).join('')}</div></li>`).join('');
+    $('#checkList').innerHTML = CHECK_Q.map((q, i) => `<li><p>${q}</p><div class="opts" role="group" aria-label="${esc(q)}">${OPT.map((o, k) => `<button type="button" data-q="${i}" data-v="${k + 1}" aria-label="${k + 1}：${o}" aria-pressed="${checkAns[i] === k + 1}"><b>${k + 1}</b></button>`).join('')}</div><div class="ends" aria-hidden="true"><span>あてはまらない</span><span>あてはまる</span></div></li>`).join('');
     $('#checkResult').hidden = !Store.d[checkWhich];
     if (Store.d[checkWhich]) this.show();
     $('#checkDone').disabled = checkAns.some(v => !v); checkProgress();
@@ -1884,10 +1919,10 @@ Screens.lab = {
     $$('.labstep').forEach(s => s.classList.toggle('on', +s.dataset.step === labI));
     $$('#labDots button').forEach(b => b.setAttribute('aria-current', String(+b.dataset.i === labI)));
     $('#labPrev').disabled = labI === 0;
-    $('#labNext').textContent = labI === 3 ? '次へ：描き込みスライダー →' : '次へ →';
+    $('#labNext').textContent = labI === 3 ? '次へ：描き込みスライダー →' : '次の実験 →';
   },
 };
-function labSet(k, v) { const L = Object.assign({}, Store.d.lab); L[k] = v; Store.set('lab', L); labSummary(); }
+function labSet(k, v) { const L = Object.assign({}, Store.d.lab); L[k] = v; Store.set('lab', L); labSummary(); if (current === 'lab') renderJourney('lab'); }
 function labSummary() {
   const L = Store.d.lab || {}, el = $('#labSum');
   const items = [L.kz && `見えない三角形：${L.kz}`, L.hide && `霧で隠れた所：「${L.hide}」と予想`, L.blur && `ぼかし絵：${L.blur}段階目でわかった`, L.manga && `2コマのあいだ：「${L.manga}」と予想`].filter(Boolean);
@@ -1896,7 +1931,7 @@ function labSummary() {
 }
 function renderBlurHist(bins) {
   bins = bins || Array(10).fill(0);
-  const five = [1, 3, 5, 7, 9].map(i => bins[i] || 0), max = Math.max(1, ...five), mine = Store.d.lab && Store.d.lab.blur;
+  const five = [1, 3, 5, 7, 9].map(i => bins[i] || 0), max = Math.max(3, ...five), mine = Store.d.lab && Store.d.lab.blur;
   $('#blurHist').innerHTML = five.map((n, i) => { const h = (n / max * 100).toFixed(1) + '%'; return `<div class="bar${mine === i + 1 ? ' mine' : ''}" style="--h:${h}" aria-label="${i + 1}段階目：${n}人"><i style="height:${h}"></i><b>${n || ''}</b></div>`; }).join('');
 }
 $('#kzAns').addEventListener('click', e => { const b = e.target.closest('button[data-kz]'); if (!b) return; $$('#kzAns button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); labSet('kz', b.dataset.kz); });
@@ -1950,34 +1985,37 @@ function drawHide() {
   }
 }
 $('#hideBtn').addEventListener('click', e => { if ($('#hideGuess').value.trim()) labSet('hide', $('#hideGuess').value.trim().slice(0, 30)); hideOpen = !hideOpen; e.currentTarget.setAttribute('aria-pressed', String(hideOpen)); e.currentTarget.textContent = hideOpen ? 'もう一度隠す' : '霧を晴らす'; drawHide(); $('#hideNote').textContent = hideOpen ? '想像した松と同じでしたか？ 隠れていたあいだも、あなたの頭の中には何かが「あった」はずです。' : ''; });
+/* 墨で描いた、すわる猫。濃い墨の面で姿をつくり、胸・口もと・目は墨を抜いて紙の白を残す */
 function drawCat(g, W, H) {
-  /* 墨で描いた座りねこ（紙の地つき）。教材の創作 */
-  g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(Tex.paper(W, H), 0, 0, W, H);
-  const t = newCanvas(W, H), k = t.getContext('2d'), X = u => u * W, Y = v => v * H, P = a => a.map(p => [X(p[0]), Y(p[1])]);
-  /* 淡墨の量感 */
-  Ink.wash(k, X(0.5), Y(0.7), W * 0.2, H * 0.2, 0.36); Ink.wash(k, X(0.47), Y(0.74), W * 0.17, H * 0.14, 0.3); Ink.wash(k, X(0.34), Y(0.43), H * 0.17, H * 0.15, 0.4);
-  Ink.wash(k, X(0.7), Y(0.7), W * 0.07, H * 0.16, 0.2);
-  /* 耳の濃い塗り */
-  for (const e of [[[0.26, 0.36], [0.255, 0.2], [0.325, 0.31]], [[0.36, 0.3], [0.425, 0.19], [0.43, 0.36]]]) { k.fillStyle = ink(0.55); k.beginPath(); k.moveTo(X(e[0][0]), Y(e[0][1])); k.lineTo(X(e[1][0]), Y(e[1][1])); k.lineTo(X(e[2][0]), Y(e[2][1])); k.closePath(); k.fill(); }
-  /* 輪郭 */
-  const S = (pts, w0, w1, a, seed, dry) => Ink.stroke(k, spline(P(pts), 8), { w0, w1, a, dry: dry || 0.25, seed });
-  S([[0.27, 0.37], [0.255, 0.2], [0.325, 0.3]], 3, 2, 0.8, 3); S([[0.355, 0.3], [0.425, 0.185], [0.435, 0.36]], 3, 2, 0.8, 4);
-  S([[0.255, 0.37], [0.235, 0.44], [0.27, 0.54], [0.34, 0.56], [0.41, 0.52], [0.44, 0.44], [0.435, 0.37]], 4, 3, 0.75, 5, 0.3);
-  S([[0.43, 0.43], [0.5, 0.45], [0.6, 0.55], [0.66, 0.7], [0.65, 0.84]], 6, 4, 0.8, 6, 0.4);
-  S([[0.27, 0.56], [0.25, 0.7], [0.26, 0.84], [0.3, 0.88]], 5, 3, 0.8, 7, 0.35);
-  S([[0.3, 0.88], [0.44, 0.9], [0.56, 0.89], [0.65, 0.85]], 7, 4, 0.85, 8, 0.5);
-  S([[0.3, 0.6], [0.31, 0.72], [0.31, 0.88]], 2.5, 2, 0.5, 9);
-  /* しっぽ */
-  S([[0.65, 0.85], [0.78, 0.88], [0.86, 0.76], [0.82, 0.55], [0.74, 0.5]], 9, 3, 0.85, 10, 0.55);
-  /* ひげ */
-  for (const [x, y, dx, dy] of [[0.27, 0.47, -0.12, -0.02], [0.27, 0.49, -0.12, 0.03], [0.4, 0.47, 0.12, -0.02], [0.4, 0.49, 0.12, 0.03]]) Ink.line(k, [[X(x), Y(y)], [X(x + dx * 0.5), Y(y + dy * 0.4)], [X(x + dx), Y(y + dy)]], 0.9, 0.5);
-  /* 鼻と口 */
-  Ink.line(k, [[X(0.325), Y(0.465)], [X(0.335), Y(0.478)], [X(0.345), Y(0.465)]], 1.6, 0.7);
-  /* 目は紙の白を残す */
-  finishInk(t, 0.3);
-  g.drawImage(t, 0, 0);
-  g.fillStyle = 'rgba(247,244,236,.96)'; for (const x of [0.29, 0.375]) { g.beginPath(); g.ellipse(X(x), Y(0.41), H * 0.022, H * 0.016, 0, 0, 7); g.fill(); }
-  g.fillStyle = ink(0.85); for (const x of [0.29, 0.375]) { g.beginPath(); g.ellipse(X(x), Y(0.41), H * 0.006, H * 0.013, 0, 0, 7); g.fill(); }
+  g.drawImage(Tex.paper(W, H), 0, 0, W, H);
+  const t = newCanvas(W, H), c = t.getContext('2d'); c.scale(W / 480, H / 340); c.lineCap = 'round'; c.lineJoin = 'round';
+  Ink.wash(c, 248, 305, 135, 11, 0.3);
+  const body = new Path2D('M178 96 L184 46 L207 72 Q216 68 226 72 L247 44 L256 92 C262 110 258 128 248 138 C290 150 322 190 326 240 C328 270 318 292 300 298 L190 298 C176 298 172 286 178 270 C172 230 170 190 184 150 C172 142 166 120 178 96 Z');
+  const gr = c.createLinearGradient(165, 60, 335, 300); gr.addColorStop(0, ink(0.6)); gr.addColorStop(0.5, ink(0.82)); gr.addColorStop(1, ink(0.94));
+  c.fillStyle = gr; c.fill(body);
+  c.save(); c.clip(body); Ink.wash(c, 292, 236, 62, 84, 0.5); Ink.wash(c, 236, 92, 30, 30, 0.32); Ink.wash(c, 250, 180, 30, 50, 0.25); c.restore();
+  /* 背の毛並み：穂の開いた筆で外へ払う */
+  const r = rng(9);
+  for (let i = 0; i < 18; i++) { const u = i / 17, bx = 252 + 74 * Math.pow(u, 0.75), by = 142 + 146 * u; Ink.stroke(c, [[bx - 5, by + 3], [bx + 5 + r() * 6, by - 4 - r() * 5]], { w0: 5, w1: 5, a: 0.55, dry: 0.5, splay: 1.3, hair: 1, seed: i + 3 }); }
+  for (let i = 0; i < 5; i++) { const x = 208 + i * 5; Ink.stroke(c, [[x, 74], [x + (i - 2) * 1.5, 64 - r() * 3]], { w0: 3, w1: 3, a: 0.5, dry: 0.5, splay: 1, hair: 0.9, seed: i + 40 }); }
+  /* 墨を抜く：胸の白、口もと、耳の内、目 */
+  c.globalCompositeOperation = 'destination-out';
+  Ink.wash(c, 187, 208, 13, 50, 0.5); Ink.wash(c, 189, 123, 18, 13, 0.8); Ink.wash(c, 190, 66, 5, 11, 0.55); Ink.wash(c, 242, 63, 5, 11, 0.55); Ink.wash(c, 184, 290, 16, 8, 0.5);
+  c.fillStyle = '#000';
+  const eyes = [[204, 101, 9.5], [181.5, 104, 5.6]];
+  for (const [x, y, rx] of eyes) { c.beginPath(); c.ellipse(x, y, rx, 6, -0.14, 0, 7); c.fill(); }
+  c.globalCompositeOperation = 'source-over';
+  c.fillStyle = ink(0.96);
+  for (const [x, y, rx] of eyes) { c.beginPath(); c.ellipse(x - rx * 0.12, y, rx * 0.26, 5.4, 0, 0, 7); c.fill(); c.strokeStyle = ink(0.9); c.lineWidth = 1.2; c.beginPath(); c.ellipse(x, y, rx, 6, -0.14, 0, 7); c.stroke(); }
+  c.beginPath(); c.moveTo(180.5, 117); c.lineTo(188.5, 117); c.lineTo(184.5, 122); c.closePath(); c.fill();
+  Ink.line(c, [[184.5, 122], [184.5, 126.5], [180, 130]], 1.3, 0.85); Ink.line(c, [[184.5, 126.5], [190, 130.5]], 1.3, 0.85);
+  for (const [x2, y2] of [[134, 106], [130, 121], [138, 137]]) Ink.line(c, [[177, 123], [(177 + x2) / 2, (123 + y2) / 2 - 2.5], [x2, y2]], 1, 0.6);
+  for (const [x2, y2] of [[196, 121], [197, 126]]) Ink.line(c, [[192, 124], [x2 + 34, y2 - 6 + (y2 - 121) * 2.4]], 0.9, 0.35);
+  /* 前足のさかい、足もとに回した尾 */
+  Ink.line(c, [[196, 262], [197, 296]], 1.2, 0.5);
+  Ink.stroke(c, spline([[316, 274], [352, 294], [334, 314], [266, 313], [216, 309], [186, 302]], 6), { w0: 17, w1: 7, a: 0.93, dry: 0.25, seed: 21 });
+  finishInk(t, 0.5);
+  g.drawImage(t, 0, 0, W, H);
 }
 function drawBlur() {
   const cv = $('#blurCv'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
@@ -1990,9 +2028,42 @@ function drawBlur() {
 }
 $('#blurBtn').addEventListener('click', () => { blurLv = blurLv >= BLUR.length - 1 ? 0 : blurLv + 1; drawBlur(); });
 function buildManga() {
-  const k1 = `<svg viewBox="0 0 90 120" style="filter:url(#mgWob)" aria-label="1コマ目：机の端のコップと、ねこの前足"><line x1="0" y1="78" x2="62" y2="78" stroke="#1c1c1c" stroke-width="2"/><line x1="8" y1="78" x2="8" y2="120" stroke="#1c1c1c" stroke-width="2"/><path d="M44 54 L60 54 L58 78 L46 78 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><path d="M60 60 q7 2 0 10" fill="none" stroke="#1c1c1c" stroke-width="2"/><circle cx="80" cy="46" r="12" fill="#1c1c1c"/><path d="M71 38 L72 26 L78 35 Z M82 34 L88 26 L89 38 Z" fill="#1c1c1c"/><ellipse cx="66" cy="62" rx="7" ry="4" fill="#1c1c1c"/><path d="M70 60 L80 54" stroke="#1c1c1c" stroke-width="5" stroke-linecap="round"/></svg>`;
-  const k2 = `<svg viewBox="0 0 90 120" style="filter:url(#mgWob)" aria-label="3コマ目：床に割れたコップと、知らんぷりのねこ"><line x1="0" y1="104" x2="90" y2="104" stroke="#1c1c1c" stroke-width="2"/><path d="M20 104 l6 -9 l5 9 Z M36 104 l3 -6 l7 4 Z M48 103 l8 -5 l2 6 Z M14 101 l-4 -4" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><circle cx="68" cy="56" r="11" fill="#1c1c1c"/><path d="M60 49 L61 38 L67 46 Z M70 45 L76 38 L77 50 Z" fill="#1c1c1c"/><ellipse cx="70" cy="84" rx="13" ry="18" fill="#1c1c1c"/><text x="40" y="30" font-size="12" fill="#1c1c1c">…</text></svg>`;
-  const mid = `<svg viewBox="0 0 90 120" style="filter:url(#mgWob)" aria-label="あいだのコマ：コップが落ちる"><line x1="0" y1="40" x2="40" y2="40" stroke="#1c1c1c" stroke-width="2"/><g transform="rotate(35 50 70)"><path d="M42 58 L58 58 L56 82 L44 82 Z" fill="#fff" stroke="#1c1c1c" stroke-width="2"/></g><path d="M30 50 q-4 10 0 22 M24 56 q-3 8 0 16" stroke="#1c1c1c" fill="none"/><text x="8" y="112" font-size="15" font-weight="700" fill="#1c1c1c">ガシャーン</text></svg>`;
+  const A = 'stroke="#1c1c1c" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"', T = 'stroke="#1c1c1c" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"', WH = 'fill="#fffefb"';
+  /* 白い体の上に、太い墨線→細い白線を重ねて「ふちどりのある線」（腕・尾）を描く */
+  const limb = d => `<path d="${d}" fill="none" stroke="#1c1c1c" stroke-width="9.4" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#fffefb" stroke-width="4.8" stroke-linecap="round"/>`;
+  const face = (x, y, look) => `<ellipse cx="${x - 5}" cy="${y + look}" rx="1.7" ry="2.5" fill="#1c1c1c"/><ellipse cx="${x + 5}" cy="${y + look}" rx="1.7" ry="2.5" fill="#1c1c1c"/><path d="M${x - 1.3} ${y + 5} h2.6 l-1.3 1.7 Z" fill="#1c1c1c" stroke="#1c1c1c" stroke-width=".6"/><path d="M${x} ${y + 6.7} q-1.8 2.2 -3.8 .9 M${x} ${y + 6.7} q1.8 2.2 3.8 .9 M${x - 7} ${y + 5.5} l-9 -2 M${x - 7} ${y + 7.5} l-9 1 M${x + 7} ${y + 5.5} l9 -2 M${x + 7} ${y + 7.5} l9 1" ${T}/>`;
+  const ears = (x, y) => `<path d="M${x - 11} ${y - 6} L${x - 13} ${y - 22} L${x - 2} ${y - 12} Z" ${WH} ${A}/><path d="M${x + 4} ${y - 13} L${x + 12} ${y - 24} L${x + 14.5} ${y - 9} Z" ${WH} ${A}/><path d="M${x - 10.5} ${y - 10} L${x - 11.5} ${y - 17.5} L${x - 6} ${y - 12.5} Z M${x + 7} ${y - 13.5} L${x + 11} ${y - 19} L${x + 12} ${y - 12} Z" fill="#bdb9ae"/>`;
+  const cup = `<path d="M0 0 H16 L14.5 20 H1.5 Z" ${WH} ${A}/><path d="M0 4 q-7 1.5 -1 10" fill="none" ${A}/>`;
+  /* 1コマ目：机の上にすわった猫が、机の端のコップへ前足をのばす */
+  const k1 = `<svg viewBox="0 0 120 160" aria-label="1コマ目：机の上の猫が、机の端のコップに前足をのばしている">
+    <path d="M16 104 H124 V111 H16 Z" fill="#e4e1d8" ${A}/><path d="M28 111 V162 M37 111 V162" ${A} fill="none"/>
+    ${limb('M101 99 C117 101 119 84 109 75')}
+    <path d="M62 104 C59 88 60 75 68 67 C82 57 100 63 105 81 C108 92 106 104 102 104 Z" ${WH} ${A}/>
+    <path d="M103 104 C90 104 84 93 91 83" ${T}/>
+    <g transform="translate(21 84)">${cup}</g>
+    ${limb('M67 81 Q55 81 44.5 91')}
+    ${ears(70, 51)}<ellipse cx="70" cy="51" rx="14.5" ry="12.5" ${WH} ${A}/>${face(68, 48, 0)}
+    <path d="M13 82 l-6 -3 M11 91 h-7 M13 100 l-6 3" ${T}/></svg>`;
+  /* 3コマ目：床に割れたコップ。猫は机の上から見おろしている */
+  const k2 = `<svg viewBox="0 0 120 160" aria-label="3コマ目：床に割れたコップ。猫が机の上から見おろしている">
+    <path d="M34 50 H124 V57 H34 Z" fill="#e4e1d8" ${A}/><path d="M46 57 V146 M55 57 V146" ${A} fill="none"/>
+    ${limb('M104 46 C117 40 117 24 106 17')}
+    <path d="M52 50 C54 30 96 26 108 50 Z" ${WH} ${A}/>
+    ${ears(50, 31)}<ellipse cx="50" cy="31" rx="14.5" ry="12.5" ${WH} ${A}/>${face(48, 29, 2.2)}
+    <ellipse cx="40" cy="50" rx="4.6" ry="3.4" ${WH} ${A}/><ellipse cx="51" cy="51" rx="4.6" ry="3.4" ${WH} ${A}/>
+    <text x="72" y="16" font-size="14" font-weight="700" fill="#1c1c1c">…</text>
+    <path d="M0 146 H120" ${A}/><ellipse cx="34" cy="151" rx="30" ry="4" fill="#d5d1c7"/>
+    <path d="M12 146 L14 129 L19 137 L23 127 L27 138 L31 130 L32 146 Z" ${WH} ${A}/><path d="M12 134 q-6 2 -1 9" fill="none" ${A}/>
+    <path d="M43 146 l5 -8 l4 8 Z M62 146 l3 -5 l6 5 Z M2 146 l2 -5 l4 5 Z" ${WH} ${A}/>
+    <path d="M40 124 l3 -7 M50 129 l6 -5 M8 122 l-3 -6 M24 118 v-7" ${T}/></svg>`;
+  /* あいだのコマ：コップが落ちていく */
+  const mid = `<svg viewBox="0 0 120 160" aria-label="あいだのコマ：猫に押されたコップが机から落ちていく">
+    <path d="M72 30 H124 V37 H72 Z" fill="#e4e1d8" ${A}/>
+    ${limb('M100 25 Q88 22 78 30')}
+    <g transform="translate(40 76) rotate(-38 8 10)">${cup}</g>
+    <path d="M62 44 q-9 10 -9 24 M71 50 q-7 9 -7 20 M54 40 q-9 11 -10 22" ${T}/>
+    <circle cx="27" cy="72" r="2.2" fill="#d5d1c7" ${T}/><circle cx="22" cy="88" r="1.7" fill="#d5d1c7" ${T}/><circle cx="33" cy="60" r="1.5" fill="#d5d1c7" ${T}/>
+    <text x="10" y="142" font-size="15" font-weight="700" fill="#1c1c1c">ヒュー…</text></svg>`;
   /* 手描きの揺らぎ：線用（mgWob）と枠用（mgFrame）。幾何学の錯視（カニッツァ）には使わない */
   const defs = `<svg class="mgdefs" width="0" height="0" aria-hidden="true" focusable="false"><defs><filter id="mgWob" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".06" numOctaves="2" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.4" xChannelSelector="R" yChannelSelector="G"/></filter><filter id="mgFrame" x="-3%" y="-3%" width="106%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter></defs></svg>`;
   $('#manga').innerHTML = defs + `<div class="koma">${k1}</div><button type="button" class="koma gap" id="mangaGap">ここで<br>何が？<br>（タップ）</button><div class="koma">${k2}</div>`;
@@ -2042,7 +2113,7 @@ $('#brushVote').addEventListener('click', async e => {
 
 /* ---------- 霧の松林 ---------- */
 let forest = null, forestUnsub = null;
-function setMist(v) { $('#mistOut').textContent = v; if (forest) forest.mist = v / 100; $('#overBadge').hidden = v > 6; Sound.mist(v / 100); }
+function setMist(v) { $('#mistOut').textContent = v; if (forest) forest.mist = v / 100; $('#overBadge').hidden = v > 6; Sound.mist(v / 100); if (forest && v < 40) { forest.walked = true; $('#coach').classList.add('gone'); } }
 Screens.forest = {
   title: '霧の松林をあるく',
   enter() {
