@@ -10,7 +10,9 @@
  *     実行ユーザー：自分 ／ アクセスできるユーザー：全員（または組織内の全員）
  *  6. 表示された URL（…/exec）を教材の教員用画面に貼る
  *
- * 個人情報は集めない：生徒の名前・メールは受け取らない。client は端末ごとのランダムな英数字。
+ * 個人情報は集めない：生徒の名前・メールは保存しない。client は端末ごとのランダムな英数字。
+ * 生徒の記録（続きから再開するため）は、学校のアカウントから作った「元に戻せない符号」で見分けて保存する。
+ * メールアドレスそのものはシートに書かない（符号の材料の USER_SALT はスクリプト プロパティ。消すと記録を引き継げなくなる）。
  *
  * 公開範囲が「学校のドメイン内の全員」しか選べない場合（GitHub Pages の教材から直接つなげない場合）：
  *   このウェブアプリの URL そのものを生徒に配る。教材の画面もここから配信し（doGet）、
@@ -21,7 +23,7 @@
  *   HTML ファイル「Index」として貼り付ければ、そちらを使う。
  */
 var APP_URL = 'https://sakadosoutan-boop.github.io/kuuhaku/';
-var VERSION = '1.2.1';
+var VERSION = '1.3.0';
 var CFG = {
   MAX_LEN: 30,               // 投稿の最大文字数
   POST_INTERVAL_SEC: 15,     // 同じ端末の連投間隔
@@ -36,6 +38,7 @@ var HEADERS = {
   posts: ['id', 'class', 'text', 'x', 'y', 'client', 'time', 'hidden'],
   votes: ['class', 'client', 'kind', 'value', 'time'],
   classes: ['class', 'open', 'updated'],
+  progress: ['key', 'class', 'data', 'updated'],
 };
 var KINDS = ['brush', 'mist', 'blur'];  // 描き込み・靄・ぼかし絵（何段階目でわかったか）
 var NG = ['しね', '死ね', 'ころす', '殺す', 'ころせ', '殺せ', 'きもい', 'きしょい', 'うざい', 'うぜ', 'ばか(?!り|す)', '馬鹿', 'あほ(?!う)', '阿呆', 'ぶす(?!い)', 'くず(?!れ|す|も)', 'きえろ', '消えろ', '死んで', 'ちんこ', 'まんこ', 'うんこ', 'ちんちん', 'おっぱい', 'せっくす', 'sex', 'fuck', 'shit', 'でぶ', 'はげ(?!し|む|ま)'];
@@ -50,7 +53,7 @@ function doGet(e) {
 function api(json) {
   var p;
   try { p = JSON.parse(String(json || '{}')); } catch (err) { return JSON.stringify({ ok: false, error: 'badjson' }); }
-  return JSON.stringify(handle_(p));
+  return JSON.stringify(handle_(p, true));
 }
 function doPost(e) {
   var p = {};
@@ -98,9 +101,12 @@ function page_(p) {
 }
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
-function handle_(p) {
+function handle_(p, viaApi) {
   try {
     switch (String(p.action || '')) {
+      /* 生徒の記録：学校のアカウントで開いた GAS のページ（google.script.run）からだけ受け付ける */
+      case 'me': return viaApi ? me_() : { ok: false, error: 'embedonly' };
+      case 'save': return viaApi ? save_(p) : { ok: false, error: 'embedonly' };
       case 'ping': return { ok: true, version: VERSION, time: Date.now() };
       case 'state': return state_(p);
       case 'post': return post_(p);
@@ -270,6 +276,60 @@ function admin_(p) {
   });
 }
 
+/* ---------------- 生徒の記録（続きから再開） ---------------- */
+var PROG_FIELDS = ['pre', 'post', 'mistBest', 'brushVote', 'myPosts', 'reflection', 'lab', 'client'];
+var PROG_MAX = 30000;   // 1人分の記録の上限（文字数）
+function salt_() {
+  var props = PropertiesService.getScriptProperties(), s = props.getProperty('USER_SALT');
+  if (s) return s;
+  return withLock_(function () {
+    var again = props.getProperty('USER_SALT'); if (again) return again;
+    var made = Utilities.getUuid() + Utilities.getUuid(); props.setProperty('USER_SALT', made); return made;
+  });
+}
+/* 開いた人の学校アカウントから、元に戻せない符号を作る（メールアドレスは保存しない） */
+function userKey_() {
+  var email = ''; try { email = String(Session.getActiveUser().getEmail() || ''); } catch (err) { email = ''; }
+  if (!email) return null;
+  var d = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt_() + '|' + email.toLowerCase(), Utilities.Charset.UTF_8);
+  return 'U' + Utilities.base64EncodeWebSafe(d).replace(/=+$/, '').slice(0, 32);
+}
+function findProgress_(key) {
+  var rows = rows_('progress');
+  for (var i = 0; i < rows.length; i++) if (String(rows[i][0]) === key) return { i: i, row: rows[i] };
+  return null;
+}
+function me_() {
+  var key = userKey_();
+  if (!key) return { ok: true, signed: false };
+  var f = findProgress_(key), data = null;
+  if (f) { try { data = JSON.parse(String(f.row[2])); } catch (err) { data = null; } }
+  return { ok: true, signed: true, who: key, progress: data, updated: f ? timeOf_(f.row[3]) : 0 };
+}
+function save_(p) {
+  var key = userKey_();
+  if (!key) fail_('signin');
+  var src = p.data;
+  if (typeof src === 'string') { try { src = JSON.parse(src); } catch (err) { fail_('badjson'); } }
+  if (!src || typeof src !== 'object' || Array.isArray(src)) fail_('data');
+  var data = {};
+  PROG_FIELDS.forEach(function (k) { if (src[k] !== undefined) data[k] = src[k]; });
+  var json = JSON.stringify(data);
+  if (json.length > PROG_MAX) fail_('toolarge');
+  var rl = 'sv:' + key;
+  if (cache_().get(rl)) fail_('rate');
+  var c = String(p['class'] || '').trim().toUpperCase(); if (!/^[A-Z0-9_-]{1,16}$/.test(c)) c = '';
+  return withLock_(function () {
+    var sh = sheet_('progress'), f = findProgress_(key), now = Date.now();
+    /* ほかの端末の新しい記録を、古い記録で上書きしない（base＝この端末が最後に受け取った版） */
+    if (f && p.base != null && timeOf_(f.row[3]) > Number(p.base)) fail_('conflict');
+    if (f) sh.getRange(f.i + 2, 2, 1, 3).setValues([[c || String(f.row[1] || ''), json, now]]);
+    else sh.appendRow([key, c, json, now]);
+    cache_().put(rl, '1', 1);
+    return { ok: true, updated: now };
+  });
+}
+
 /* ---------------- 教員が最初に一度だけ実行 ---------------- */
 function setup() {
   if (!SpreadsheetApp.getActiveSpreadsheet()) throw new Error('このスクリプトはスプレッドシートに紐づいていません。スプレッドシートを開き、［拡張機能］→［Apps Script］から作り直してください。');
@@ -278,6 +338,9 @@ function setup() {
     sh.setFrozenRows(1);
   });
   sheet_('posts').getRange('C:C').setNumberFormat('@');
+  sheet_('progress').getRange('C:C').setNumberFormat('@');
+  salt_();
+  try { Session.getActiveUser().getEmail(); } catch (err) { /* 権限の確認のため */ }
   var pin = PropertiesService.getScriptProperties().getProperty('TEACHER_PIN');
   console.log(pin ? 'セットアップ完了。TEACHER_PIN は設定済みです。' : 'セットアップ完了。［プロジェクトの設定］→［スクリプト プロパティ］で TEACHER_PIN を追加してください。');
   return 'OK ' + VERSION;

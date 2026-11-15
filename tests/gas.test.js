@@ -61,10 +61,10 @@ t('setup が動く', () => { g.sandbox.setup(); assert.ok(g.sheets.has('classes'
 /* ---- 学校のドメイン内だけに公開する場合：GAS が教材の画面を配信する ---- */
 const fs = require('fs'), path = require('path');
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'gas', 'Code.gs'), 'utf8');
-t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.2.1'));
+t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.3.0'));
 t('外部への通信の権限を求めない（UrlFetchApp を使わない。学校の管理設定で setup が止まらないように）', () => {
   assert.ok(!/UrlFetchApp/.test(SRC), 'UrlFetchApp が残っている（外部通信の権限を求めてしまう）');
-  for (const svc of ['GmailApp', 'DriveApp', 'MailApp', 'CalendarApp', 'DocumentApp', 'Session.getActiveUser', 'openById', 'openByUrl']) assert.ok(!SRC.includes(svc), svc + ' を使っている（余計な権限を求める）');
+  for (const svc of ['GmailApp', 'DriveApp', 'MailApp', 'CalendarApp', 'DocumentApp', 'openById', 'openByUrl']) assert.ok(!SRC.includes(svc), svc + ' を使っている（余計な権限を求める）');
 });
 t('action なしの GET は、教材を読み込む小さなページを返す', () => {
   const g2 = createGas({ pin: '1' });
@@ -93,12 +93,68 @@ t('URL のパラメータに <script> を混ぜても、画面に注入されな
 });
 t('api()：google.script.run の入口が、これまでの API と同じ結果を返す', () => {
   const g2 = createGas({ pin: '2468' });
-  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.2.1');
+  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.3.0');
   assert.strictEqual(JSON.parse(g2.api('{bad')).error, 'badjson');
   const r = JSON.parse(g2.api(JSON.stringify({ action: 'post', 'class': '2A', client: 'apiclient001', text: '霧の奥', x: .4, y: .5 }))); assert.ok(r.ok);
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'state', 'class': '2A' }))).posts[0].text, '霧の奥');
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'admin', 'class': '2A', pin: 'x', op: 'list' }))).error, 'pin');
 });
 t('action 付きの GET は、これまでどおり JSON（公開範囲が「全員」の方式）', () => { const r = g.get({ action: 'ping' }); assert.ok(r.ok); });
-t('setup と check：紐づいたスプレッドシートで動き、版を返す', () => { const g2 = createGas({ pin: '1' }); assert.strictEqual(g2.sandbox.setup(), 'OK 1.2.1'); assert.strictEqual(g2.sandbox.check(), 'OK'); });
+t('setup と check：紐づいたスプレッドシートで動き、版を返す', () => { const g2 = createGas({ pin: '1' }); assert.strictEqual(g2.sandbox.setup(), 'OK 1.3.0'); assert.strictEqual(g2.sandbox.check(), 'OK'); });
+/* ---- 生徒の記録：学校のアカウントで見分けて、続きから再開できる ---- */
+t('記録：ログインしていなければ signed:false（保存もしない）', () => {
+  const g2 = createGas({ pin: '1' });
+  assert.deepStrictEqual(JSON.parse(g2.api('{"action":"me"}')), { ok: true, signed: false });
+  assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'save', data: { pre: [1, 2, 3, 4, 1, 2] } }))).error, 'signin');
+});
+t('記録：保存して、別の端末（同じアカウント）から読み出せる', () => {
+  const g2 = createGas({ pin: '1' }), A = 'st001@saitama.example';
+  const m0 = JSON.parse(g2.apiAs(A, '{"action":"me"}')); assert.ok(m0.signed); assert.strictEqual(m0.progress, null); assert.strictEqual(m0.updated, 0);
+  const sv = JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', 'class': '2a', data: { pre: [1, 2, 3, 4, 1, 2], brushVote: 77, myPosts: [{ text: '霧の奥', x: .3, y: .4, t: 1 }], lab: { kz: '見えた' }, reflection: '白は無ではない', secret: 'x' } })));
+  assert.ok(sv.ok && sv.updated > 0);
+  const m1 = JSON.parse(g2.apiAs(A, '{"action":"me"}'));
+  assert.deepStrictEqual(m1.progress.pre, [1, 2, 3, 4, 1, 2]); assert.strictEqual(m1.progress.brushVote, 77); assert.strictEqual(m1.progress.myPosts[0].text, '霧の奥');
+  assert.strictEqual(m1.progress.secret, undefined, '決まった項目以外は保存しない'); assert.strictEqual(m1.updated, sv.updated); assert.strictEqual(m1.who, m0.who);
+});
+t('記録：上書き保存は1行のまま。別のアカウントとは混ざらない', () => {
+  const g2 = createGas({ pin: '1' }), A = 'st001@saitama.example', B = 'st002@saitama.example';
+  g2.apiAs(A, JSON.stringify({ action: 'save', data: { brushVote: 10 } })); g2.advance(2);
+  g2.apiAs(A, JSON.stringify({ action: 'save', data: { brushVote: 90 } })); g2.advance(2);
+  g2.apiAs(B, JSON.stringify({ action: 'save', data: { brushVote: 50 } }));
+  assert.strictEqual(JSON.parse(g2.apiAs(A, '{"action":"me"}')).progress.brushVote, 90);
+  assert.strictEqual(JSON.parse(g2.apiAs(B, '{"action":"me"}')).progress.brushVote, 50);
+  assert.strictEqual(g2.sheets.get('progress').data.length, 3, '見出し＋2人分');
+  assert.strictEqual(JSON.parse(g2.apiAs('st003@saitama.example', '{"action":"me"}')).progress, null);
+});
+t('記録：シートにメールアドレスを書かない（元に戻せない符号だけ）', () => {
+  const g2 = createGas({ pin: '1' }), A = 'Taro.Saitama@saitama.example';
+  g2.apiAs(A, JSON.stringify({ action: 'save', 'class': '2A', data: { pre: [1, 1, 1, 1, 1, 1] } }));
+  const all = JSON.stringify([...g2.sheets.values()].map(s => s.data)).toLowerCase();
+  assert.ok(!all.includes('saitama.example') && !all.includes('taro'), 'メールアドレスがシートに残っている');
+  const key = g2.sheets.get('progress').data[1][0]; assert.match(key, /^U[A-Za-z0-9_-]{32}$/);
+  assert.strictEqual(JSON.parse(g2.apiAs(A.toLowerCase(), '{"action":"me"}')).who, key, '大文字・小文字で別人にしない');
+  assert.ok(g2.props.USER_SALT && g2.props.USER_SALT.length > 20, 'USER_SALT が作られていない');
+});
+t('記録：同じアカウントでも、USER_SALT が違えば別の符号（推測されにくい）', () => {
+  const a = createGas({ pin: '1' }), b = createGas({ pin: '1' }), U = 'st001@saitama.example';
+  assert.notStrictEqual(JSON.parse(a.apiAs(U, '{"action":"me"}')).who, JSON.parse(b.apiAs(U, '{"action":"me"}')).who);
+});
+t('記録：大きすぎる・形が違う・連続の保存は断る', () => {
+  const g2 = createGas({ pin: '1' }), A = 'st001@saitama.example';
+  assert.strictEqual(JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', data: { reflection: 'あ'.repeat(31000) } }))).error, 'toolarge');
+  assert.strictEqual(JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', data: [1, 2] }))).error, 'data');
+  assert.ok(JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', data: { brushVote: 1 } }))).ok);
+  assert.strictEqual(JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', data: { brushVote: 2 } }))).error, 'rate');
+  g2.advance(2); assert.ok(JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', data: { brushVote: 3 } }))).ok);
+});
+t('記録：古い版をもとにした保存は断る（ほかの端末の新しい記録を消さない）', () => {
+  const g2 = createGas({ pin: '1' }), A = 'st001@saitama.example';
+  const s1 = JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', base: 0, data: { brushVote: 1 } }))); assert.ok(s1.ok); g2.advance(2);
+  const s2 = JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', base: s1.updated, data: { brushVote: 2 } }))); assert.ok(s2.ok); g2.advance(2);
+  assert.strictEqual(JSON.parse(g2.apiAs(A, JSON.stringify({ action: 'save', base: s1.updated, data: { brushVote: 9 } }))).error, 'conflict');
+  assert.strictEqual(JSON.parse(g2.apiAs(A, '{"action":"me"}')).progress.brushVote, 2);
+});
+t('記録：公開範囲「全員」の fetch（doGet/doPost）からは、記録を読み書きできない', () => {
+  assert.strictEqual(g.get({ action: 'me' }).error, 'embedonly'); assert.strictEqual(g.post({ action: 'save', data: {} }).error, 'embedonly');
+});
 console.log(`GAS API: ${n} 件すべて成功`);

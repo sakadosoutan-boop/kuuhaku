@@ -397,6 +397,10 @@ body[data-flow] .journey{display:flex}
 .fsbtn svg{width:18px;height:18px;display:block}
 details.about{margin-top:1.6rem}
 details.about summary{cursor:pointer;color:var(--sumi);font-size:.88rem;min-height:40px;display:flex;align-items:center}
+.cloudnote{margin:.2rem 0 0;display:flex;align-items:center;gap:6px}
+.cloudnote::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--usuzumi);flex:none}
+.cloudnote.ok::before{background:#3f6b4a}
+.cloudnote.err::before{background:#7a2b22}
 /* ---- 全画面 ---- */
 .hud{max-width:min(72%,460px)}
 .xp .badge{top:auto;bottom:34px;left:10px}
@@ -467,6 +471,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
   <div class="classline">
     <button class="classchip" id="classChip" aria-expanded="false" aria-controls="classBox">クラスコードを入れる</button>
     <p class="share-note" id="shareStatus"></p>
+    <p class="share-note cloudnote" data-cloud-note hidden></p>
   </div>
   <div class="card" id="classBox" hidden>
     <div class="field">
@@ -660,6 +665,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
 <!-- ============ 振り返り ============ -->
 <section id="s-reflect" class="screen">
   <h2>振り返り</h2>
+  <p class="share-note cloudnote" data-cloud-note hidden></p>
   <div class="card" id="rfCheck"></div>
   <h3>掛け軸の目盛り（前と後）</h3>
   <div class="kake" id="rfKake"></div>
@@ -810,7 +816,8 @@ const Store = {
       this.save();
     }
   },
-  save() { try { localStorage.setItem(this.key, JSON.stringify(this.d)); return true; } catch (e) { /* 保存できなくても動く。一度だけ知らせる */ const w = document.getElementById('saveWarn'); if (w) w.hidden = false; return false; } },
+  onSave: null,
+  save() { if (this.onSave) this.onSave(); try { localStorage.setItem(this.key, JSON.stringify(this.d)); return true; } catch (e) { /* 保存できなくても動く。一度だけ知らせる */ const w = document.getElementById('saveWarn'); if (w) w.hidden = false; return false; } },
   set(k, v) { this.d[k] = v; this.save(); },
 };
 Store.load();
@@ -1786,6 +1793,75 @@ const Share = {
   },
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && Share.subs.size) Share.kick(); });
+
+/* =========================================================
+   生徒の記録を、学校のアカウントに保存する（GAS から配信されたページだけ）
+   授業をまたいでも、別の Chromebook でも、続きから再開できる。
+   ========================================================= */
+const PROG_KEYS = ['pre', 'post', 'mistBest', 'brushVote', 'myPosts', 'reflection', 'lab', 'client'];
+const PROG_DEFAULT = () => ({ pre: null, post: null, mistBest: null, brushVote: null, myPosts: [], reflection: '', lab: {} });
+const Cloud = {
+  on: false, state: 'off', timer: null, busy: false,
+  pack() { const o = {}; PROG_KEYS.forEach(k => { o[k] = Store.d[k]; }); return o; },
+  json() { return JSON.stringify(this.pack()); },
+  /* Store.save のたびに呼ばれる：前回の同期から変わっていれば、少し待って保存 */
+  touch() {
+    if (!EMBED) return;
+    const j = this.json(); Store.d.progDirty = j !== (Store.d.progSync || '');
+    if (this.on && Store.d.progDirty) this.schedule();
+  },
+  schedule(ms = 2500) { clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), ms); },
+  async init() {
+    if (!EMBED) return;
+    this.state = 'loading'; this.render();
+    const r = await Share.req({ action: 'me' });
+    if (!r.ok) { this.state = r.error === 'unknown' ? 'old' : 'error'; this.render(); return; }
+    if (!r.signed) { this.state = 'nosign'; this.render(); return; }
+    const d = Store.d;
+    /* 同じブラウザで別の人がログインしたら、前の人の記録は持ち込まない */
+    if (d.progOwner && d.progOwner !== r.who) { Object.assign(d, PROG_DEFAULT()); d.progSync = ''; d.progAt = 0; d.progDirty = false; }
+    d.progOwner = r.who;
+    const srv = r.progress, srvAt = r.updated || 0, localAt = d.progAt || 0;
+    let restored = false;
+    if (srv && srvAt > localAt) {
+      /* ほかの端末で進めた記録がある。こちらに未保存の変更があれば、空いている所だけこちらを残す */
+      for (const k of PROG_KEYS) {
+        if (k === 'client') { if (srv.client) d.client = srv.client; continue; }
+        const sv = srv[k], lv = d[k];
+        const empty = v => v == null || v === '' || (Array.isArray(v) && !v.length) || (typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length);
+        if (k === 'myPosts' && d.progDirty && Array.isArray(lv)) { const seen = new Set((sv || []).map(x => x.t + x.text)); d.myPosts = (sv || []).concat(lv.filter(x => !seen.has(x.t + x.text))); }
+        else if (k === 'lab' && d.progDirty && lv && sv) d.lab = Object.assign({}, lv, sv);
+        else d[k] = empty(sv) && d.progDirty ? lv : (sv === undefined ? PROG_DEFAULT()[k] : sv);
+      }
+      d.progAt = srvAt; restored = !!(srv.pre || srv.brushVote != null || srv.mistBest != null || (srv.myPosts && srv.myPosts.length) || (srv.lab && Object.keys(srv.lab).length));
+    }
+    d.progSync = restored && !d.progDirty ? this.json() : (srv ? JSON.stringify(Object.assign(PROG_DEFAULT(), srv)) : '');
+    this.on = true; this.state = 'saved';
+    Store.save();                      /* ここで差があれば、保存の予約が入る */
+    this.render();
+    if (restored) { toast('前回の続きから再開できます'); route(); }
+  },
+  async flush() {
+    if (!this.on || this.busy) return;
+    const j = this.json(); if (j === (Store.d.progSync || '')) { Store.d.progDirty = false; this.state = 'saved'; this.render(); return; }
+    this.busy = true; this.state = 'saving'; this.render();
+    const r = await Share.req({ action: 'save', class: Share.cls, data: this.pack(), base: Store.d.progAt || 0 });
+    this.busy = false;
+    /* ほかの端末で記録が進んでいた：受け取って合わせてから、保存し直す */
+    if (!r.ok && r.error === 'conflict' && (this.retry = (this.retry || 0) + 1) <= 3) { this.on = false; await this.init(); return; }
+    if (r.ok) this.retry = 0;
+    if (r.ok) { Store.d.progSync = j; Store.d.progAt = r.updated; Store.d.progDirty = this.json() !== j; this.state = 'saved'; try { localStorage.setItem(Store.key, JSON.stringify(Store.d)); } catch (e) {} if (Store.d.progDirty) this.schedule(); }
+    else { this.state = 'error'; this.schedule(r.error === 'rate' ? 1500 : 15000); }
+    this.render();
+  },
+  render() {
+    const t = { off: '', loading: '記録を読み込んでいます…', nosign: '記録：この端末だけに保存（学校のアカウントで開くと、別の日・別の端末でも続きから）', old: '記録：この端末だけに保存（先生へ：Code.gs を 1.3.0 以降に更新すると、アカウントに保存されます）', error: '記録：アカウントへの保存に失敗しました。この端末には残っています（自動でやり直します）', saving: '記録を保存しています…', saved: '記録：学校のアカウントに保存しています（別の日・別の端末でも続きから）' }[this.state] || '';
+    $$('[data-cloud-note]').forEach(e => { e.hidden = !t; e.textContent = t; e.classList.toggle('ok', this.state === 'saved' || this.state === 'saving'); e.classList.toggle('err', this.state === 'error'); });
+  },
+};
+Store.onSave = () => Cloud.touch();
+document.addEventListener('visibilitychange', () => { if (document.hidden && Cloud.on) Cloud.flush(); });
+window.addEventListener('pagehide', () => { if (Cloud.on) Cloud.flush(); });
 window.addEventListener('storage', e => { if (e.key && e.key.startsWith('kuuhaku.local.') && Share.subs.size) Share.kick(); });
 
 function renderHist(el, bins, mine) {
@@ -2758,6 +2834,7 @@ $('#tLinkCopy').addEventListener('click', async () => { const t = $('#tLink').va
   if (p.has('lesson')) { Store.d.lesson = p.get('lesson') === '1'; changed = true; }
   if (changed) { Store.save(); const keep = p.get('q'); try { history.replaceState(null, '', location.pathname + (keep ? '?q=' + keep : '') + location.hash); } catch (e) {} }
   applyLesson(); route();
+  Cloud.init();
 })();
 </script>
 <dialog class="settings" id="askDlg" aria-labelledby="askMsg"><p id="askMsg" style="margin:0 0 14px;line-height:1.7"></p><div class="row" style="justify-content:flex-end"><button class="btn" id="askNo">やめる</button><button class="btn primary" id="askYes">実行する</button></div></dialog>

@@ -490,7 +490,7 @@ async function embedFlow(browser, base) {
     await page.fill('#tPin', '2468'); await page.click('#tLogin'); await page.waitForTimeout(600);
     assert.match(await page.inputValue('#tLink'), /^https:\/\/script\.google\.com\/a\/macros\/saitama\.example\/s\/DEPLOY\/exec\?class=2A$/);
     assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(3) button', 'data-link'), SELF + '?class=2A&scene=forest');
-    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent("#tGasMsg"), /版 1\.2\.1/);
+    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent("#tGasMsg"), /版 1\.3\.0/);
   });
   await step('配信ページ：教員の操作（非表示・全消去）。確認はページ内のダイアログ', async () => {
     assert.match(await page.textContent('#tPosts'), /霧の向こうの港/);
@@ -508,6 +508,54 @@ async function embedFlow(browser, base) {
     const note = await page.textContent('#s-write [data-share-note]'); assert.match(note, /先生に知らせてください/); assert.doesNotMatch(note, /Exception|Apps Script/);
     fail = false;
   });
+  await step('記録：学校のアカウントに保存され、別の日・別の端末で続きから再開できる', async () => {
+    const g4 = createGas({ pin: '2468' }); const A = 'st015@saitama.example', B = 'st016@saitama.example';
+    /* 端末（ブラウザのプロファイル）を作る。user はそのブラウザでログインしている学校アカウント */
+    const device = async (user) => {
+      const c = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, locale: 'ja-JP' });
+      const pg = await c.newPage(); pg.errs = []; pg.on('pageerror', e => pg.errs.push(e.message));
+      const st = { user };
+      await pg.exposeFunction('__gasApi', json => { g4.advance(1); return g4.apiAs(st.user, json); });
+      await pg.addInitScript(({ origin, SELF }) => { window.KUUHAKU_EMBEDDED = true; window.KUUHAKU_BASE = origin; window.KUUHAKU_SELF = SELF; window.KUUHAKU_PARAMS = { 'class': '2A' }; const mk = (ok, ng) => ({ withSuccessHandler: f => mk(f, ng), withFailureHandler: f => mk(ok, f), api: json => { window.__gasApi(json).then(r => ok && ok(r), e => ng && ng(e)); } }); window.google = { script: { run: mk(null, null) } }; }, { origin, SELF });
+      return { c, pg, st };
+    };
+    const waitSaved = pg => pg.waitForFunction(() => Cloud.state === 'saved' && !Store.d.progDirty && Store.d.progSync === Cloud.json(), null, { timeout: 15000 });
+    /* 1日目：Chromebook ①で、うめたい度（前）と描き込みの投票をする */
+    const d1 = await device(A);
+    await d1.pg.goto(base.split('#')[0] + '#/check/pre'); await d1.pg.waitForSelector('#s-check.on'); await d1.pg.waitForFunction(() => Cloud.state === 'saved');
+    assert.match(await d1.pg.evaluate(() => document.querySelector('[data-cloud-note]').textContent), /学校のアカウントに保存/);
+    for (let i = 0; i < 6; i++) await d1.pg.click(`button[data-q="${i}"][data-v="${(i % 4) + 1}"]`);
+    await d1.pg.click('#checkDone');
+    await open(d1.pg, base, 'brush'); await d1.pg.$eval('#brushRange', e => { e.value = 88; e.dispatchEvent(new Event('input')); }); await d1.pg.click('#brushVote');
+    await d1.pg.waitForFunction(() => Store.d.brushVote === 88); await waitSaved(d1.pg);
+    const saved = JSON.parse(g4.apiAs(A, '{"action":"me"}')).progress;
+    assert.deepStrictEqual(saved.pre, [1, 2, 3, 4, 1, 2]); assert.strictEqual(saved.brushVote, 88);
+    /* 2日目：別の Chromebook ②（何も残っていない）で同じアカウント → 続きから */
+    const d2 = await device(A);
+    await d2.pg.goto(base.split('#')[0]); await d2.pg.waitForSelector('#s-home.on'); await d2.pg.waitForFunction(() => Cloud.state === 'saved');
+    assert.deepStrictEqual(await d2.pg.evaluate(() => [Store.d.pre, Store.d.brushVote]), [[1, 2, 3, 4, 1, 2], 88]);
+    await d2.pg.waitForFunction(() => document.querySelectorAll('#trail li.done').length >= 2, null, { timeout: 5000 });
+    assert.match(await d2.pg.textContent('#startBtn'), /つづきから：補完ラボ/);   // 飛ばした補完ラボが次
+    assert.match(await d2.pg.textContent('#toast'), /続きから/);
+    /* ②で霧の松林を記録 → ①に戻ると、②の続きが入っている */
+    await open(d2.pg, base, 'forest'); await d2.pg.$eval('#mistRange', e => { e.value = 41; e.dispatchEvent(new Event('input')); }); await d2.pg.click('#mistRec');
+    await d2.pg.waitForFunction(() => Store.d.mistBest === 41); await waitSaved(d2.pg);
+    /* ①の古いタブで操作しても、②の記録を消さない（受け取って合わせてから保存し直す） */
+    await d1.pg.evaluate(() => { Store.d.reflection = '古いタブで書いた'; Store.save(); });
+    await d1.pg.waitForFunction(() => Store.d.mistBest === 41 && Store.d.reflection === '古いタブで書いた', null, { timeout: 15000 }); await waitSaved(d1.pg);
+    const merged = JSON.parse(g4.apiAs(A, '{"action":"me"}')).progress; assert.strictEqual(merged.mistBest, 41, '②の記録が消えた'); assert.strictEqual(merged.reflection, '古いタブで書いた');
+    await d1.pg.goto(base.split('#')[0] + '#/reflect'); await d1.pg.waitForSelector('#s-reflect.on'); await d1.pg.waitForFunction(() => Cloud.state === 'saved');
+    assert.strictEqual(await d1.pg.evaluate(() => Store.d.mistBest), 41, '①に②の記録が入っていない');
+    assert.match(await d1.pg.inputValue('#rfOut'), /濃さ 41/);
+    /* 同じブラウザで別の生徒（B）がログインし直した → A の記録は持ち込まない */
+    d1.st.user = B; await d1.pg.reload(); await d1.pg.waitForFunction(() => Cloud.state === 'saved');
+    assert.deepStrictEqual(await d1.pg.evaluate(() => [Store.d.pre, Store.d.brushVote, Store.d.mistBest]), [null, null, null], '別の生徒に前の生徒の記録が入った');
+    assert.strictEqual(JSON.parse(g4.apiAs(A, '{"action":"me"}')).progress.mistBest, 41, 'A の記録が消えた');
+    /* シートにはメールアドレスが残らない */
+    assert.ok(!JSON.stringify(g4.sheets.get('progress').data).includes('saitama.example'));
+    for (const d of [d1, d2]) { assert.deepStrictEqual(d.pg.errs, []); await d.c.close(); }
+  });
+
   await step('読み込み役のページ：ブラウザが教材を取り寄せて書き込み、そのまま google.script.run で共有できる', async () => {
     const g3 = createGas({ pin: '2468' }); g3.props.APP_URL = origin;   // 教材の置き場所＝テスト用のサーバー
     const LOADER = origin + '__gas_loader.html';

@@ -29,6 +29,7 @@ function createGas({ pin = '1234' } = {}) {
   }
   const ss = { getName: () => '空白の意味_共有', getSheetByName: n => sheets.get(n) || null, insertSheet: n => { const s = makeSheet(n); sheets.set(n, s); return s; } };
   const cacheStore = new Map();
+  const who = { user: '' };                         // いま開いている人の学校アカウント（Session.getActiveUser）
   const props = { TEACHER_PIN: pin };
   const files = {};                                  // Apps Script に貼った HTML ファイル
   const net = { code: 200, body: '<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>松林図をあるく</title></head><body><main>' + 'x'.repeat(30000) + '</main></body></html>', log: [] };
@@ -45,7 +46,8 @@ function createGas({ pin = '1234' } = {}) {
       remove: k => cacheStore.delete(k),
     }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in props ? props[k] : null) }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in props && props[k] != null ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); } }) },
+    Session: { getActiveUser: () => ({ getEmail: () => who.user }), getEffectiveUser: () => ({ getEmail: () => 'teacher@saitama.example' }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => ({ content: s, setMimeType() { return this; }, getContent() { return this.content; } }) },
     HtmlService: {
       XFrameOptionsMode: { ALLOWALL: 'ALLOWALL' },
@@ -54,7 +56,10 @@ function createGas({ pin = '1234' } = {}) {
     },
     UrlFetchApp: { fetch: url => { net.log.push(url); return { getResponseCode: () => net.code, getContentText: () => net.body }; } },
     ScriptApp: { getService: () => ({ getUrl: () => 'https://script.google.com/a/macros/saitama.example/s/DEPLOY/exec' }) },
-    Utilities: { getUuid: () => Math.random().toString(16).slice(2, 10) + '-0000' },
+    Utilities: {
+      DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
+      computeDigest: (alg, str) => Array.from(require('crypto').createHash(alg).update(String(str), 'utf8').digest()).map(b => b > 127 ? b - 256 : b),
+      base64EncodeWebSafe: arr => Buffer.from(arr.map(b => b & 255)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_'), getUuid: () => Math.random().toString(16).slice(2, 10) + '-0000' },
   };
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'gas', 'Code.gs'), 'utf8'), sandbox, { filename: 'Code.gs' });
@@ -63,7 +68,9 @@ function createGas({ pin = '1234' } = {}) {
     post: body => JSON.parse(sandbox.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).getContent()),
     advance: sec => { clock += sec * 1000; },
     page: params => sandbox.doGet({ parameter: params }),      // 教材の画面（HtmlService の出力）
-    api: json => sandbox.api(json),                            // google.script.run から呼ぶ入口
+    api: json => sandbox.api(json),
+    apiAs: (user, json) => { who.user = user || ''; try { return sandbox.api(json); } finally { who.user = ''; } },   // その人のアカウントで google.script.run から呼ぶ
+    who,                            // google.script.run から呼ぶ入口
     files, net,
     sheets, props, sandbox,
   };
