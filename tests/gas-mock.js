@@ -30,18 +30,30 @@ function createGas({ pin = '1234' } = {}) {
   const ss = { getSheetByName: n => sheets.get(n) || null, insertSheet: n => { const s = makeSheet(n); sheets.set(n, s); return s; } };
   const cacheStore = new Map();
   const props = { TEACHER_PIN: pin };
+  const files = {};                                  // Apps Script に貼った HTML ファイル
+  const net = { code: 200, body: '<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>松林図をあるく</title></head><body><main>' + 'x'.repeat(30000) + '</main></body></html>', log: [] };
+  const cacheGet = k => { const e = cacheStore.get(k); if (!e || e.exp <= now()) { cacheStore.delete(k); return null; } return e.v; };
   const sandbox = {
     console: { log() {}, error() {} },
     Date: class extends Date { constructor(...a) { if (a.length) super(...a); else super(now()); } static now() { return now(); } },
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
     CacheService: { getScriptCache: () => ({
-      get: k => { const e = cacheStore.get(k); if (!e || e.exp <= now()) { cacheStore.delete(k); return null; } return e.v; },
-      put: (k, v, sec) => cacheStore.set(k, { v: String(v), exp: now() + (sec || 600) * 1000 }),
+      get: cacheGet,
+      getAll: keys => { const o = {}; keys.forEach(k => { const v = cacheGet(k); if (v != null) o[k] = v; }); return o; },
+      put: (k, v, sec) => { if (Buffer.byteLength(String(v)) > 100 * 1024) throw new Error('Argument too large: value'); cacheStore.set(k, { v: String(v), exp: now() + (sec || 600) * 1000 }); },
+      putAll: (o, sec) => Object.keys(o).forEach(k => { if (Buffer.byteLength(String(o[k])) > 100 * 1024) throw new Error('Argument too large: value'); cacheStore.set(k, { v: String(o[k]), exp: now() + (sec || 600) * 1000 }); }),
       remove: k => cacheStore.delete(k),
     }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in props ? props[k] : null) }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => ({ content: s, setMimeType() { return this; }, getContent() { return this.content; } }) },
+    HtmlService: {
+      XFrameOptionsMode: { ALLOWALL: 'ALLOWALL' },
+      createHtmlOutputFromFile: name => { if (!(name in files)) throw new Error('No HTML file named ' + name + ' was found.'); return { getContent: () => files[name] }; },
+      createHtmlOutput: html => ({ html, title: '', meta: [], mode: null, setTitle(t) { this.title = t; return this; }, addMetaTag(k, v) { this.meta.push([k, v]); return this; }, setXFrameOptionsMode(m) { this.mode = m; return this; }, getContent() { return this.html; } }),
+    },
+    UrlFetchApp: { fetch: url => { net.log.push(url); return { getResponseCode: () => net.code, getContentText: () => net.body }; } },
+    ScriptApp: { getService: () => ({ getUrl: () => 'https://script.google.com/a/macros/saitama.example/s/DEPLOY/exec' }) },
     Utilities: { getUuid: () => Math.random().toString(16).slice(2, 10) + '-0000' },
   };
   vm.createContext(sandbox);
@@ -50,6 +62,9 @@ function createGas({ pin = '1234' } = {}) {
     get: params => JSON.parse(sandbox.doGet({ parameter: params }).getContent()),
     post: body => JSON.parse(sandbox.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).getContent()),
     advance: sec => { clock += sec * 1000; },
+    page: params => sandbox.doGet({ parameter: params }),      // 教材の画面（HtmlService の出力）
+    api: json => sandbox.api(json),                            // google.script.run から呼ぶ入口
+    files, net,
     sheets, props, sandbox,
   };
 }

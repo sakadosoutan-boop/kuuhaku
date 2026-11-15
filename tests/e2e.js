@@ -445,14 +445,80 @@ async function gasFlow(browser, base) {
   await ctx.close();
 }
 
+async function embedFlow(browser, base) {
+  console.log('[GAS から配信（学校のドメイン内だけに公開）] スマホ 360×740');
+  const gas = createGas({ pin: '2468' });
+  const SELF = 'https://script.google.com/a/macros/saitama.example/s/DEPLOY/exec';
+  const origin = new URL(base).origin + '/';
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, locale: 'ja-JP', acceptDownloads: true });
+  const page = await ctx.newPage(); page.errors = []; const reqs = [];
+  page.on('pageerror', e => page.errors.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) page.errors.push(m.text()); });
+  page.on('request', r => reqs.push(r.url()));
+  let fail = false, calls = 0;
+  await page.exposeFunction('__gasApi', json => { calls++; if (fail) throw new Error('Exception: サービスが一時的に使えません'); gas.advance(1); return gas.api(json); });
+  await page.addInitScript(({ origin, SELF }) => {
+    window.KUUHAKU_EMBEDDED = true; window.KUUHAKU_BASE = origin; window.KUUHAKU_SELF = SELF; window.KUUHAKU_PARAMS = { 'class': '2A', lesson: '', scene: 'brush', q: '' };
+    const mk = (ok, ng) => ({ withSuccessHandler: f => mk(f, ng), withFailureHandler: f => mk(ok, f), api: json => { window.__gasApi(json).then(r => ok && ok(r), e => ng && ng(e)); } });
+    window.google = { script: { run: mk(null, null) } };
+  }, { origin, SELF });
+  await page.goto(base.split('#')[0]); await page.waitForSelector('#s-brush.on');
+  await step('配信ページ：scene と class を引き継ぎ、共有（GAS）として動く', async () => {
+    assert.strictEqual(await page.evaluate(() => Share.mode + ' ' + Share.cls), 'gas 2A');
+    assert.match(await page.textContent('#shareStatus').catch(() => ''), /2A|共有/);
+  });
+  await step('配信ページ：投票が google.script.run で届き、分布に出る', async () => {
+    await page.$eval('#brushRange', e => { e.value = 77; e.dispatchEvent(new Event('input')); }); await page.click('#brushVote'); await page.waitForTimeout(500);
+    assert.strictEqual(gas.get({ action: 'state', 'class': '2A' }).votes.brush[7], 1);
+    await page.waitForFunction(() => document.querySelector('#brushHist .bar.mine b')?.textContent === '1');
+  });
+  await step('配信ページ：言葉を書くと届く。通信は fetch でなく google.script.run だけ', async () => {
+    await open(page, base, 'write'); await page.waitForTimeout(800);
+    const w = await page.evaluate(() => { const f = writeForest; for (let y = f.H * 0.2; y < f.H * 0.8; y += 13) for (let x = f.W * 0.2; x < f.W * 0.8; x += 17) if (f.isWhite(x, y)) { const r = f.cv.getBoundingClientRect(); return { x: r.left + x, y: r.top + y }; } return null; });
+    await page.touchscreen.tap(w.x, w.y); await page.fill('#writeText', '霧の向こうの港'); await page.click('#writeForm button[type=submit]'); await page.waitForTimeout(500);
+    assert.ok(gas.get({ action: 'state', 'class': '2A' }).posts.some(p => p.text === '霧の向こうの港'));
+    assert.ok(calls > 0); assert.ok(!reqs.some(u => /script\.google\.com/.test(u)), 'fetch で script.google.com へ出ている');
+  });
+  await step('配信ページ：教材の画像と three.js は、教材の公開先（BASE）から読む', async () => {
+    await open(page, base, 'byobu'); await page.waitForFunction(() => Byobu.mode === 'gl' || Byobu.mode === 'css', null, { timeout: 15000 });
+    assert.ok(reqs.some(u => u === origin + 'vendor/three.min.js'), 'three.js を BASE から読んでいない');
+    await page.waitForFunction(() => Byobu.src === 'real'); assert.ok(reqs.some(u => u === origin + 'assets/shorinzu-right.jpg'));
+    assert.ok(await page.evaluate(() => Byobu.mode) === 'gl');
+  });
+  await step('配信ページ：教員用は共有先の設定がなく、リンクは配信ページの URL', async () => {
+    await open(page, base, 'teacher');
+    assert.ok(await page.isVisible('#tEmbedNote')); assert.ok(await page.isHidden('#tGas'));
+    await page.fill('#tPin', '2468'); await page.click('#tLogin'); await page.waitForTimeout(600);
+    assert.match(await page.inputValue('#tLink'), /^https:\/\/script\.google\.com\/a\/macros\/saitama\.example\/s\/DEPLOY\/exec\?class=2A$/);
+    assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(3) button', 'data-link'), SELF + '?class=2A&scene=forest');
+    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent('#tGasMsg'), /版 1\.2\.0/);
+  });
+  await step('配信ページ：教員の操作（非表示・全消去）。確認はページ内のダイアログ', async () => {
+    assert.match(await page.textContent('#tPosts'), /霧の向こうの港/);
+    await page.click('#tPosts button[data-op=hide]'); await page.waitForTimeout(500); assert.ok(!gas.get({ action: 'state', 'class': '2A' }).posts.some(p => p.text === '霧の向こうの港'));
+    await page.click('#tClear'); await page.waitForSelector('#askDlg[open]'); assert.match(await page.textContent('#askMsg'), /すべて消します/);
+    await page.click('#askNo'); await page.waitForFunction(() => !document.querySelector('#askDlg').open); assert.strictEqual(gas.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'list' }).posts.length, 1, 'やめるで消えた');
+    await page.click('#tClear'); await page.waitForSelector('#askDlg[open]'); await page.click('#askYes'); await page.waitForTimeout(600);
+    assert.strictEqual(gas.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'list' }).posts.length, 0);
+    await page.screenshot({ path: path.join(SHOTS, 'embed-teacher.png') });
+  });
+  await step('配信ページ：Apps Script が失敗したら、先生に原因を示し、生徒には短く伝える', async () => {
+    fail = true;
+    await page.click('#tPing'); await page.waitForFunction(() => !/確かめています/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent('#tGasMsg'), /Apps Script でエラー|共有先（Apps Script）/);
+    await open(page, base, 'write'); await page.waitForTimeout(1500);
+    const note = await page.textContent('#s-write [data-share-note]'); assert.match(note, /先生に知らせてください/); assert.doesNotMatch(note, /Exception|Apps Script/);
+    fail = false;
+  });
+  assert.deepStrictEqual(page.errors, [], 'コンソールエラー'); await ctx.close();
+}
+
 (async () => {
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}/index.html`;
   const browser = await chromium.launch({ env: Object.assign({}, process.env, { LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' }) }); // 日本語のファイル名を保つため
   try {
-    await localFlow(browser, base, { width: 360, height: 740 }, 'phone');
-    await localFlow(browser, base, { width: 1366, height: 768 }, 'chromebook');
-    await gasFlow(browser, base);
+    const only = process.env.ONLY || '';   // 開発用：ONLY=embed で GAS 配信の部分だけ実行
+    if (!only) { await localFlow(browser, base, { width: 360, height: 740 }, 'phone'); await localFlow(browser, base, { width: 1366, height: 768 }, 'chromebook'); await gasFlow(browser, base); }
+    if (!only || only === 'embed') await embedFlow(browser, base);
     console.log(`E2E: ${count} 件すべて成功。スクリーンショット: tests/screenshots/`);
   } catch (e) { console.error('失敗:', e); process.exitCode = 1; }
   finally { await browser.close(); srv.close(); }

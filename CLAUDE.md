@@ -21,6 +21,8 @@
 
 Playwright はインストール済みの Chromium を使う（`playwright install` はしない）。変更後は両方を通す。
 
+共有は二つの届け方がある（docs/設計.md 2.8）。GAS の画面配信（`doGet` のページ・`api()`）を変えたら、`tests/gas.test.js` と、`ONLY=embed node tests/e2e.js`（GAS から配信された状態の模擬）の両方を通す。
+
 画面の切り替えは霧をはさんで約0.2秒遅れる。テストでは `#s-◯◯.on` を待つ（`tests/e2e.js` の `open()`）。
 
 ## 公開

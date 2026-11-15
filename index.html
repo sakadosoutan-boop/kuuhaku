@@ -482,8 +482,8 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
 
   <h2>本物に会う</h2>
   <div class="more">
-    <a href="#/real" style="background-image:url(assets/thumb-real.jpg)"><span>実物を見る<small>本物の松林図を拡大する</small></span></a>
-    <a href="#/byobu" class="fold" style="background-image:url(assets/thumb-byobu.jpg)"><span>屏風モード<small>折って立てた屏風を 3D で</small></span></a>
+    <a href="#/real" data-bg="assets/thumb-real.jpg" style="background-image:url(assets/thumb-real.jpg)"><span>実物を見る<small>本物の松林図を拡大する</small></span></a>
+    <a href="#/byobu" class="fold" data-bg="assets/thumb-byobu.jpg" style="background-image:url(assets/thumb-byobu.jpg)"><span>屏風モード<small>折って立てた屏風を 3D で</small></span></a>
   </div>
 
   <details class="about"><summary>この教材について</summary>
@@ -731,6 +731,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
   <div class="card">
     <h3 style="margin-top:0">共有の設定（この端末）</h3>
     <p class="share-note" id="tMode"></p>
+    <p class="note" id="tEmbedNote" hidden>このページは Apps Script から配信されています。共有先の設定は要りません（いまの通信は、ログイン中の学校アカウントで行われます）。生徒には、下の「生徒に配るリンク」を配ってください。</p>
     <label for="tGas" class="note">GAS ウェブアプリの URL（<code>https://script.google.com/macros/s/…/exec</code>）。空にすると「端末内のみ」。</label>
     <div class="field"><input id="tGas" class="wide" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/……/exec"></div>
     <div class="row"><button class="btn" id="tGasSave">保存</button><button class="btn" id="tPing">接続を確かめる</button></div>
@@ -778,6 +779,10 @@ const CONFIG = {
   MAX_POSTS: 10,
 };
 
+/* ---------- GAS から配信されたとき（学校のドメイン内だけに公開する場合） ---------- */
+const EMBED = !!window.KUUHAKU_EMBEDDED;
+const BASE = window.KUUHAKU_BASE || '';
+const EPARAMS = window.KUUHAKU_PARAMS || {};
 /* ---------- 小道具 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -1655,7 +1660,7 @@ const ERR = {
   rate: `少し待ってから書いてね（${CONFIG.POST_INTERVAL_SEC}秒に1回）。`, limit: `書けるのは1人${CONFIG.MAX_POSTS}個までです。`, closed: 'いまは受付を停止しています。',
   class: 'ホームでクラスコードを入れてください。', client: '端末の識別に失敗しました。', network: '共有先につながりません。少し待ってもう一度。',
   blocked: '共有先につながりません。先生に知らせてください。', timeout: '共有先の返事が遅れています。少し待ってもう一度。', offline: 'ネットワークにつながっていません。', http: '共有先がエラーを返しました。先生に知らせてください。', html: '共有先が正しく答えていません。先生に知らせてください。', pin: 'PIN がちがいます。',
-  locked: 'PIN のまちがいが続いたため、10分間受け付けません。', nopin: 'GAS 側でスクリプト プロパティ TEACHER_PIN が設定されていません。', server: '共有先でエラーが起きました。', unknown: '共有先が古い版かもしれません。',
+  locked: 'PIN のまちがいが続いたため、10分間受け付けません。', nopin: 'GAS 側でスクリプト プロパティ TEACHER_PIN が設定されていません。', server: '共有先でエラーが起きました。先生に知らせてください。', unknown: '共有先が古い版かもしれません。',
 };
 const errMsg = e => ERR[e] || ('エラー：' + e);
 /* 先生向け：つながらない理由と、直し方 */
@@ -1672,6 +1677,7 @@ function diagnose(r, url) {
     case 'offline': return 'この端末がネットワークにつながっていません。';
     case 'unknown': return 'GAS は答えていますが、古い版のようです。gas/Code.gs の最新を貼り直し、［新バージョン］でデプロイしてください。';
     case 'network': return '通信の途中で失敗しました。もう一度ためしてください。';
+    case 'server': return `共有先（Apps Script）でエラーが起きました。${r.head ? '（' + r.head + '）' : ''}\nApps Script の［実行数］で失敗の内容を確かめ、gas/Code.gs が最新か確認してください。`;
     default: return errMsg(r.error);
   }
 }
@@ -1682,7 +1688,7 @@ function diagnose(r, url) {
 const Share = {
   subs: new Set(), timer: null, last: null,
   get url() { return Store.d.gasUrl || CONFIG.GAS_URL || ''; },
-  get mode() { return this.url ? 'gas' : 'local'; },
+  get mode() { return (EMBED || this.url) ? 'gas' : 'local'; },
   get cls() { return (Store.d.classCode || '').toUpperCase(); },
   label() { return this.mode === 'gas' ? `クラス ${this.cls || '（未設定）'} で共有中` : '端末内のみ（共有されません）'; },
   /* --- 端末内 --- */
@@ -1691,7 +1697,19 @@ const Share = {
   lsave(o) { try { localStorage.setItem(this.lkey(), JSON.stringify(o)); } catch (e) {} },
   bins(map) { const b = Array(10).fill(0); Object.values(map || {}).forEach(v => b[Math.min(9, Math.floor(v / 10))]++); return b; },
   /* --- 通信 --- */
+  /* GAS から配信されたページ：google.script.run → api()。ログイン済みの学校アカウントで呼ばれる */
+  reqEmbedded(params) {
+    return new Promise(done => {
+      const gs = window.google && window.google.script && window.google.script.run;
+      if (!gs) return done({ ok: false, error: 'blocked' });
+      let fin = false; const to = setTimeout(() => { if (!fin) { fin = true; done({ ok: false, error: 'timeout' }); } }, 20000);
+      gs.withSuccessHandler(txt => { if (fin) return; fin = true; clearTimeout(to); try { done(JSON.parse(txt)); } catch (_) { done({ ok: false, error: 'html', head: String(txt).slice(0, 120) }); } })
+        .withFailureHandler(err => { if (fin) return; fin = true; clearTimeout(to); done({ ok: false, error: 'server', head: String(err && err.message || err).slice(0, 160) }); })
+        .api(JSON.stringify(params));
+    });
+  },
   async req(params, post) {
+    if (EMBED) return this.reqEmbedded(params);
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const to = setTimeout(() => ctl && ctl.abort(), 15000);
     let stage = 'fetch';
@@ -1764,7 +1782,7 @@ const Share = {
     const s = await this.state();
     if (s.ok) this.last = s;
     this.subs.forEach(f => f(s));
-    if (this.subs.size) { clearTimeout(this.timer); this.timer = setTimeout(() => this.tick(), (this.mode === 'gas' ? CONFIG.POLL_MS : 4000) + Math.random() * 2000); }
+    if (this.subs.size) { clearTimeout(this.timer); this.timer = setTimeout(() => this.tick(), (this.mode === 'gas' ? CONFIG.POLL_MS + (EMBED ? 2000 : 0) : 4000) + Math.random() * 2000); }
   },
 };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && Share.subs.size) Share.kick(); });
@@ -2360,7 +2378,7 @@ Screens.real = {
     if (!realInit) {
       realInit = true;
       const msg = $('#realMsg'); let failed = 0;
-      for (const [id, src] of [['#realL', 'assets/shorinzu-left.jpg'], ['#realR', 'assets/shorinzu-right.jpg']]) {
+      for (const [id, src] of [['#realL', BASE + 'assets/shorinzu-left.jpg'], ['#realR', BASE + 'assets/shorinzu-right.jpg']]) {
         const im = $(id);
         im.addEventListener('error', () => { if (++failed === 1) { msg.hidden = false; msg.innerHTML = '画像を読み込めませんでした（オフラインかもしれません）。<br>教科書 p.146〜147 の図版か、ColBase の公式ページで見てください。'; } });
         im.addEventListener('load', () => { if (id === '#realR') { const tr = $('#realTrack'); tr.scrollLeft = tr.scrollWidth; } });
@@ -2449,7 +2467,7 @@ const Byobu = {
     this.mode = 'pending';
     const forceCss = new URLSearchParams(location.search).get('nogl') === '1';
     if (!forceCss && glSupported()) {
-      try { if (!window.THREE) await loadScript('vendor/three.min.js'); if (!window.THREE) throw new Error('no three'); this.initGL(); this.mode = 'gl'; }
+      try { if (!window.THREE) await loadScript(BASE + 'vendor/three.min.js'); if (!window.THREE) throw new Error('no three'); this.initGL(); this.mode = 'gl'; }
       catch (e) { this.mode = 'css'; }
     } else this.mode = 'css';
     if (this.mode === 'css') this.initCss();
@@ -2459,7 +2477,7 @@ const Byobu = {
   },
   image(side) {
     if (this.imgs[side]) return this.imgs[side];
-    return (this.imgs[side] = new Promise(ok => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = `assets/shorinzu-${side}.jpg`; }));
+    return (this.imgs[side] = new Promise(ok => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = `${BASE}assets/shorinzu-${side}.jpg`; }));
   },
   async sources(src) {
     const out = {};
@@ -2664,13 +2682,26 @@ Screens.byobu = {
   resize() { Byobu.resize(); if (Byobu.mode && !Byobu.goal) Byobu.setView(Byobu.view, true); },
 };
 
+/* ブラウザ標準の confirm は、GAS の画面（サンドボックス）では使えないことがあるので、ページ内で確かめる */
+function askConfirm(msg) {
+  return new Promise(res => {
+    const d = $('#askDlg'); $('#askMsg').textContent = msg;
+    const done = v => { $('#askYes').onclick = $('#askNo').onclick = null; d.removeEventListener('cancel', onCancel); if (d.close) d.close(); else d.removeAttribute('open'); res(v); };
+    const onCancel = e => { e.preventDefault(); done(false); };
+    $('#askYes').onclick = () => done(true); $('#askNo').onclick = () => done(false); d.addEventListener('cancel', onCancel);
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  });
+}
 /* ---------- 教員用 ---------- */
 let tPin = ''; try { tPin = sessionStorage.getItem('kuuhaku.pin') || ''; } catch (e) {}
-function studentLink() { const u = new URL(location.href); u.hash = ''; u.search = ''; if (Share.cls) u.searchParams.set('class', Share.cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString(); }
+function studentLink(scene) {
+  if (EMBED) { const base = window.KUUHAKU_SELF || location.href.split('#')[0]; const q = []; if (Share.cls) q.push('class=' + encodeURIComponent(Share.cls)); if (scene) q.push('scene=' + scene); return base + (q.length ? '?' + q.join('&') : ''); }
+  const u = new URL(location.href); u.hash = ''; u.search = ''; if (Share.cls) u.searchParams.set('class', Share.cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString() + (scene ? '#/' + scene : '');
+}
 const SCENES = [['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['real', '実物を見る'], ['byobu', '屏風モード'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
-function renderLinks() { $('#tLinks').innerHTML = SCENES.map(([h, n]) => `<li><span>${n}</span><button class="btn" data-link="${esc(studentLink())}#/${h}">コピー</button></li>`).join(''); }
-$('#tLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { prompt('このリンクをコピーしてください', b.dataset.link); } setTimeout(() => { b.textContent = 'コピー'; }, 1500); });
-function tRefreshCfg() { renderLinks(); $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
+function renderLinks() { $('#tLinks').innerHTML = SCENES.map(([h, n]) => `<li><span>${n}</span><button class="btn" data-link="${esc(studentLink(h))}">コピー</button></li>`).join(''); }
+$('#tLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { toast('コピーできませんでした。下の欄から選んでコピーしてください', 4000); } setTimeout(() => { b.textContent = 'コピー'; }, 1500); });
+function tRefreshCfg() { renderLinks(); if (EMBED) { $('#tEmbedNote').hidden = false; for (const id of ['#tGas', '#tGasSave']) { const el = $(id); (el.closest('.field') || el).hidden = true; el.hidden = true; } $('label[for=tGas]').hidden = true; } $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
 function tRender(r) {
   $('#tPanel').hidden = false; $('#tOpen').textContent = r.open === false ? '停止中' : '受付中';
   const posts = r.posts || []; $('#tCount').textContent = posts.length;
@@ -2697,8 +2728,8 @@ $('#tPosts').addEventListener('click', e => { const b = e.target.closest('button
 $('#tOpenBtn').addEventListener('click', () => tDo('open'));
 $('#tCloseBtn').addEventListener('click', () => tDo('close'));
 $('#tReload').addEventListener('click', () => tDo('list'));
-$('#tClear').addEventListener('click', () => { if (confirm(`クラス ${Share.cls || '（端末内）'} の投稿をすべて消します。よろしいですか？`)) tDo('clear'); });
-$('#tClearVotes').addEventListener('click', () => { if (confirm('描き込み・靄・ぼかし絵の投票をすべてリセットします。よろしいですか？')) tDo('clearVotes'); });
+$('#tClear').addEventListener('click', async () => { if (await askConfirm(`クラス ${Share.cls || '（端末内）'} の投稿をすべて消します。よろしいですか？`)) tDo('clear'); });
+$('#tClearVotes').addEventListener('click', async () => { if (await askConfirm('描き込み・靄・ぼかし絵の投票をすべてリセットします。よろしいですか？')) tDo('clearVotes'); });
 function validGas(u) { return u === '' || /^https:\/\/script\.google(usercontent)?\.com\/[\w\-\/.?=&%]+$/.test(u); }
 $('#tGasSave').addEventListener('click', () => {
   const u = $('#tGas').value.trim(); const m = $('#tGasMsg');
@@ -2719,7 +2750,9 @@ $('#tLinkCopy').addEventListener('click', async () => { const t = $('#tLink').va
    起動：URL の ?class= ?gas= ?lesson= を取り込む
    ========================================================= */
 (function boot() {
+  if (BASE) $$('[data-bg]').forEach(a => { a.style.backgroundImage = `url(${BASE}${a.dataset.bg})`; });
   const p = new URLSearchParams(location.search); let changed = false;
+  if (EMBED) { for (const k of ['class', 'lesson', 'q']) if (EPARAMS[k] && !p.has(k)) p.set(k, EPARAMS[k]); if (EPARAMS.scene && !location.hash) { try { location.hash = '#/' + EPARAMS.scene.replace(/[^a-z\/]/g, ''); } catch (e) {} } }
   if (p.has('class')) { Store.d.classCode = p.get('class').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 16); changed = true; }
   if (p.has('gas') && validGas(p.get('gas').trim())) { Store.d.gasUrl = p.get('gas').trim(); changed = true; }
   if (p.has('lesson')) { Store.d.lesson = p.get('lesson') === '1'; changed = true; }
@@ -2727,5 +2760,6 @@ $('#tLinkCopy').addEventListener('click', async () => { const t = $('#tLink').va
   applyLesson(); route();
 })();
 </script>
+<dialog class="settings" id="askDlg" aria-labelledby="askMsg"><p id="askMsg" style="margin:0 0 14px;line-height:1.7"></p><div class="row" style="justify-content:flex-end"><button class="btn" id="askNo">やめる</button><button class="btn primary" id="askYes">実行する</button></div></dialog>
 </body>
 </html>

@@ -11,8 +11,16 @@
  *  6. 表示された URL（…/exec）を教材の教員用画面に貼る
  *
  * 個人情報は集めない：生徒の名前・メールは受け取らない。client は端末ごとのランダムな英数字。
+ *
+ * 公開範囲が「学校のドメイン内の全員」しか選べない場合（GitHub Pages の教材から直接つなげない場合）：
+ *   このウェブアプリの URL そのものを生徒に配る。教材の画面もここから配信し（doGet）、
+ *   共有の通信は google.script.run → api() で行う（ログイン済みの学校アカウントがそのまま使える）。
+ *   教材の置き場所は、スクリプト プロパティ APP_URL（既定は下の APP_URL）。
+ *   外部への通信（UrlFetchApp）が管理者に止められているときは、教材の index.html を
+ *   Apps Script に HTML ファイル「Index」として貼り付ければ、そちらを優先して使う。
  */
-var VERSION = '1.1.0';
+var APP_URL = 'https://sakadosoutan-boop.github.io/kuuhaku/';
+var VERSION = '1.2.0';
 var CFG = {
   MAX_LEN: 30,               // 投稿の最大文字数
   POST_INTERVAL_SEC: 15,     // 同じ端末の連投間隔
@@ -32,11 +40,62 @@ var KINDS = ['brush', 'mist', 'blur'];  // 描き込み・靄・ぼかし絵（�
 var NG = ['しね', '死ね', 'ころす', '殺す', 'ころせ', '殺せ', 'きもい', 'きしょい', 'うざい', 'うぜ', 'ばか(?!り|す)', '馬鹿', 'あほ(?!う)', '阿呆', 'ぶす(?!い)', 'くず(?!れ|す|も)', 'きえろ', '消えろ', '死んで', 'ちんこ', 'まんこ', 'うんこ', 'ちんちん', 'おっぱい', 'せっくす', 'sex', 'fuck', 'shit', 'でぶ', 'はげ(?!し|む|ま)'];
 
 /* ---------------- 入口 ---------------- */
-function doGet(e) { return out_(handle_((e && e.parameter) || {})); }
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (p.action) return out_(handle_(p));   // 公開範囲が「全員」のとき、GitHub Pages の教材から fetch で呼ばれる
+  return page_(p);                          // それ以外は、教材の画面を配信する
+}
+/* google.script.run から呼ぶ入口（末尾に _ を付けない）。引数も返り値も JSON の文字列 */
+function api(json) {
+  var p;
+  try { p = JSON.parse(String(json || '{}')); } catch (err) { return JSON.stringify({ ok: false, error: 'badjson' }); }
+  return JSON.stringify(handle_(p));
+}
 function doPost(e) {
   var p = {};
   try { p = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { return out_({ ok: false, error: 'badjson' }); }
   return out_(handle_(p));
+}
+/* ---------------- 教材の画面を配信する ---------------- */
+function appBase_() {
+  var b = PropertiesService.getScriptProperties().getProperty('APP_URL') || APP_URL;
+  return /\/$/.test(b) ? b : b + '/';
+}
+function appHtml_(refresh) {
+  /* ① Apps Script に貼った HTML ファイル「Index」を優先 */
+  try { var own = HtmlService.createHtmlOutputFromFile('Index').getContent(); if (own && own.length > 1000) return own; } catch (err) { /* なければ次へ */ }
+  /* ② 教材の置き場所から取得（5分キャッシュ。cache は 1 つ 100KB までなので分割する） */
+  var cache = cache_(), n = Number(cache.get('app:n') || 0);
+  if (!refresh && n > 0) {
+    var keys = []; for (var i = 0; i < n; i++) keys.push('app:' + i);
+    var got = cache.getAll(keys), parts = [], ok = true;
+    for (var j = 0; j < n; j++) { if (got['app:' + j] == null) { ok = false; break; } parts.push(got['app:' + j]); }
+    if (ok) return parts.join('');
+  }
+  var res = UrlFetchApp.fetch(appBase_() + 'index.html', { muteHttpExceptions: true, followRedirects: true });
+  var html = res.getContentText('UTF-8');
+  if (res.getResponseCode() !== 200 || html.indexOf('<html') < 0) throw new Error('教材を取得できません（' + res.getResponseCode() + '）');
+  var put = {}, size = 20000, count = Math.ceil(html.length / size);
+  for (var k = 0; k < count; k++) put['app:' + k] = html.substr(k * size, size);
+  put['app:n'] = String(count);
+  try { cache.putAll(put, 300); } catch (err) { /* 保存できなくても動く */ }
+  return html;
+}
+function jsStr_(v) { return JSON.stringify(v).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'); }
+function page_(p) {
+  var html;
+  try { html = appHtml_(p.refresh === '1'); }
+  catch (err) {
+    return HtmlService.createHtmlOutput('<p style="font:16px sans-serif;padding:16px">教材を読み込めませんでした。<br>' + String(err.message).replace(/</g, '&lt;') +
+      '<br><br>Apps Script の スクリプト プロパティ APP_URL（教材の URL）か、HTML ファイル「Index」を確かめてください。</p>').setTitle('松林図をあるく');
+  }
+  var self = ''; try { self = ScriptApp.getService().getUrl(); } catch (err) { /* 取れなくても動く */ }
+  var params = { 'class': String(p['class'] || ''), lesson: String(p.lesson || ''), scene: String(p.scene || ''), q: String(p.q || '') };
+  var boot = '<script>window.KUUHAKU_EMBEDDED=true;window.KUUHAKU_BASE=' + jsStr_(appBase_()) + ';window.KUUHAKU_SELF=' + jsStr_(self) + ';window.KUUHAKU_PARAMS=' + jsStr_(params) + ';window.KUUHAKU_VERSION=' + jsStr_(VERSION) + ';</script>';
+  html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + boot; }) : boot + html;
+  return HtmlService.createHtmlOutput(html).setTitle('松林図をあるく')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
