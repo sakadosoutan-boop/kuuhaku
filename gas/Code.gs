@@ -15,12 +15,13 @@
  * 公開範囲が「学校のドメイン内の全員」しか選べない場合（GitHub Pages の教材から直接つなげない場合）：
  *   このウェブアプリの URL そのものを生徒に配る。教材の画面もここから配信し（doGet）、
  *   共有の通信は google.script.run → api() で行う（ログイン済みの学校アカウントがそのまま使える）。
- *   教材の置き場所は、スクリプト プロパティ APP_URL（既定は下の APP_URL）。
- *   外部への通信（UrlFetchApp）が管理者に止められているときは、教材の index.html を
- *   Apps Script に HTML ファイル「Index」として貼り付ければ、そちらを優先して使う。
+ *   教材の本体は、開いた人のブラウザが教材の置き場所（スクリプト プロパティ APP_URL、既定は下の APP_URL）から読み込む。
+ *   そのため、この Apps Script は外部への通信の権限を求めない（求める権限は、このスプレッドシートの読み書きだけ）。
+ *   学校のネットワークで教材の置き場所が開けないときは、教材の index.html を Apps Script に
+ *   HTML ファイル「Index」として貼り付ければ、そちらを使う。
  */
 var APP_URL = 'https://sakadosoutan-boop.github.io/kuuhaku/';
-var VERSION = '1.2.0';
+var VERSION = '1.2.1';
 var CFG = {
   MAX_LEN: 30,               // 投稿の最大文字数
   POST_INTERVAL_SEC: 15,     // 同じ端末の連投間隔
@@ -61,38 +62,36 @@ function appBase_() {
   var b = PropertiesService.getScriptProperties().getProperty('APP_URL') || APP_URL;
   return /\/$/.test(b) ? b : b + '/';
 }
-function appHtml_(refresh) {
-  /* ① Apps Script に貼った HTML ファイル「Index」を優先 */
-  try { var own = HtmlService.createHtmlOutputFromFile('Index').getContent(); if (own && own.length > 1000) return own; } catch (err) { /* なければ次へ */ }
-  /* ② 教材の置き場所から取得（5分キャッシュ。cache は 1 つ 100KB までなので分割する） */
-  var cache = cache_(), n = Number(cache.get('app:n') || 0);
-  if (!refresh && n > 0) {
-    var keys = []; for (var i = 0; i < n; i++) keys.push('app:' + i);
-    var got = cache.getAll(keys), parts = [], ok = true;
-    for (var j = 0; j < n; j++) { if (got['app:' + j] == null) { ok = false; break; } parts.push(got['app:' + j]); }
-    if (ok) return parts.join('');
-  }
-  var res = UrlFetchApp.fetch(appBase_() + 'index.html', { muteHttpExceptions: true, followRedirects: true });
-  var html = res.getContentText('UTF-8');
-  if (res.getResponseCode() !== 200 || html.indexOf('<html') < 0) throw new Error('教材を取得できません（' + res.getResponseCode() + '）');
-  var put = {}, size = 20000, count = Math.ceil(html.length / size);
-  for (var k = 0; k < count; k++) put['app:' + k] = html.substr(k * size, size);
-  put['app:n'] = String(count);
-  try { cache.putAll(put, 300); } catch (err) { /* 保存できなくても動く */ }
-  return html;
+function ownIndex_() {
+  /* Apps Script に貼った HTML ファイル「Index」があれば、それを使う */
+  try { var own = HtmlService.createHtmlOutputFromFile('Index').getContent(); if (own && own.length > 1000) return own; } catch (err) { /* なければ null */ }
+  return null;
 }
 function jsStr_(v) { return JSON.stringify(v).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'); }
+function esc_(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function page_(p) {
-  var html;
-  try { html = appHtml_(p.refresh === '1'); }
-  catch (err) {
-    return HtmlService.createHtmlOutput('<p style="font:16px sans-serif;padding:16px">教材を読み込めませんでした。<br>' + String(err.message).replace(/</g, '&lt;') +
-      '<br><br>Apps Script の スクリプト プロパティ APP_URL（教材の URL）か、HTML ファイル「Index」を確かめてください。</p>').setTitle('松林図をあるく');
-  }
   var self = ''; try { self = ScriptApp.getService().getUrl(); } catch (err) { /* 取れなくても動く */ }
+  var base = appBase_();
   var params = { 'class': String(p['class'] || ''), lesson: String(p.lesson || ''), scene: String(p.scene || ''), q: String(p.q || '') };
-  var boot = '<script>window.KUUHAKU_EMBEDDED=true;window.KUUHAKU_BASE=' + jsStr_(appBase_()) + ';window.KUUHAKU_SELF=' + jsStr_(self) + ';window.KUUHAKU_PARAMS=' + jsStr_(params) + ';window.KUUHAKU_VERSION=' + jsStr_(VERSION) + ';</script>';
-  html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + boot; }) : boot + html;
+  var boot = '<script>window.KUUHAKU_EMBEDDED=true;window.KUUHAKU_BASE=' + jsStr_(base) + ';window.KUUHAKU_SELF=' + jsStr_(self) + ';window.KUUHAKU_PARAMS=' + jsStr_(params) + ';window.KUUHAKU_VERSION=' + jsStr_(VERSION) + ';</script>';
+  var own = ownIndex_(), html;
+  if (own) {
+    html = /<head[^>]*>/i.test(own) ? own.replace(/<head[^>]*>/i, function (m) { return m + boot; }) : boot + own;
+  } else {
+    /* 読み込み役の小さなページ。開いた人のブラウザが教材を取り寄せ、このページに書き込む（google.script.run はそのまま使える） */
+    html = '<!doctype html><html lang="ja"><head><meta charset="utf-8">' + boot +
+      '<style>body{margin:0;background:#f6f3ea;color:#1c1c1c;font:16px/1.8 "Hiragino Sans","Noto Sans JP",sans-serif}#ld{padding:28vh 24px 0;text-align:center;letter-spacing:.1em}#ld small{display:block;color:#777;font-size:13px;letter-spacing:0;margin-top:12px}</style></head>' +
+      '<body><div id="ld">霧の中から、教材を呼んでいます…</div><script>(function(){' +
+      'var B=window.KUUHAKU_BASE,ld=document.getElementById("ld");' +
+      'function bad(m){ld.innerHTML="教材を読み込めませんでした。<small>"+m+"<br>教材の置き場所（"+B.replace(/</g,"&lt;")+"）が、この端末・この学校のネットワークで開けるか確かめてください。<br>開けないときは、先生が教材の index.html を Apps Script に HTML ファイル「Index」として貼り付けると動きます。</small>";}' +
+      'fetch(B+"index.html",{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.text();}).then(function(h){' +
+      'if(h.indexOf("<html")<0)throw new Error("教材ではないページが返りました");' +
+      'var s=document.head.querySelector("script").outerHTML;' +
+      'h=/<head[^>]*>/i.test(h)?h.replace(/<head[^>]*>/i,function(m){return m+s;}):s+h;' +
+      'document.open();document.write(h);document.close();' +
+      '}).catch(function(e){bad(String(e&&e.message||e).replace(/</g,"&lt;"));});' +
+      '})();</script></body></html>';
+  }
   return HtmlService.createHtmlOutput(html).setTitle('松林図をあるく')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -273,6 +272,7 @@ function admin_(p) {
 
 /* ---------------- 教員が最初に一度だけ実行 ---------------- */
 function setup() {
+  if (!SpreadsheetApp.getActiveSpreadsheet()) throw new Error('このスクリプトはスプレッドシートに紐づいていません。スプレッドシートを開き、［拡張機能］→［Apps Script］から作り直してください。');
   Object.keys(HEADERS).forEach(function (name) {
     var sh = sheet_(name);
     sh.setFrozenRows(1);
@@ -280,4 +280,11 @@ function setup() {
   sheet_('posts').getRange('C:C').setNumberFormat('@');
   var pin = PropertiesService.getScriptProperties().getProperty('TEACHER_PIN');
   console.log(pin ? 'セットアップ完了。TEACHER_PIN は設定済みです。' : 'セットアップ完了。［プロジェクトの設定］→［スクリプト プロパティ］で TEACHER_PIN を追加してください。');
+  return 'OK ' + VERSION;
+}
+/* 権限の確認だけをする小さな関数（setup で「不明なエラー」が出たとき、切り分けに使う） */
+function check() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  console.log('スプレッドシート：' + (ss ? ss.getName() : '（紐づいていない）') + '／版 ' + VERSION + '／PIN ' + (PropertiesService.getScriptProperties().getProperty('TEACHER_PIN') ? '設定済み' : '未設定'));
+  return 'OK';
 }

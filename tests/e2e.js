@@ -490,7 +490,7 @@ async function embedFlow(browser, base) {
     await page.fill('#tPin', '2468'); await page.click('#tLogin'); await page.waitForTimeout(600);
     assert.match(await page.inputValue('#tLink'), /^https:\/\/script\.google\.com\/a\/macros\/saitama\.example\/s\/DEPLOY\/exec\?class=2A$/);
     assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(3) button', 'data-link'), SELF + '?class=2A&scene=forest');
-    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent('#tGasMsg'), /版 1\.2\.0/);
+    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent("#tGasMsg"), /版 1\.2\.1/);
   });
   await step('配信ページ：教員の操作（非表示・全消去）。確認はページ内のダイアログ', async () => {
     assert.match(await page.textContent('#tPosts'), /霧の向こうの港/);
@@ -507,6 +507,29 @@ async function embedFlow(browser, base) {
     await open(page, base, 'write'); await page.waitForTimeout(1500);
     const note = await page.textContent('#s-write [data-share-note]'); assert.match(note, /先生に知らせてください/); assert.doesNotMatch(note, /Exception|Apps Script/);
     fail = false;
+  });
+  await step('読み込み役のページ：ブラウザが教材を取り寄せて書き込み、そのまま google.script.run で共有できる', async () => {
+    const g3 = createGas({ pin: '2468' }); g3.props.APP_URL = origin;   // 教材の置き場所＝テスト用のサーバー
+    const LOADER = origin + '__gas_loader.html';
+    const c3 = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, locale: 'ja-JP' });
+    const p3 = await c3.newPage(); const errs3 = []; const reqs3 = [];
+    p3.on('pageerror', e => errs3.push(e.message)); p3.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) errs3.push(m.text()); }); p3.on('request', r => reqs3.push(r.url()));
+    let calls3 = 0;
+    await p3.exposeFunction('__gasApi', json => { calls3++; g3.advance(1); return g3.api(json); });
+    /* 本物の GAS では、google.script.run は HtmlService がページに入れる。ここでは同じ形のものを先に置く（KUUHAKU_* は置かない：読み込み役が入れる） */
+    await p3.addInitScript(() => { const mk = (ok, ng) => ({ withSuccessHandler: f => mk(f, ng), withFailureHandler: f => mk(ok, f), api: json => { window.__gasApi(json).then(r => ok && ok(r), e => ng && ng(e)); } }); window.google = { script: { run: mk(null, null) } }; });
+    await p3.route(LOADER, r => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: g3.page({ 'class': '2a', scene: 'forest' }).html }));
+    await p3.goto(LOADER); await p3.waitForSelector('#s-forest.on', { timeout: 20000 });
+    assert.ok(reqs3.includes(origin + 'index.html'), 'ブラウザが教材を取り寄せていない');
+    assert.strictEqual(await p3.evaluate(() => [window.KUUHAKU_EMBEDDED, Share.mode, Share.cls, typeof (window.google && google.script && google.script.run && google.script.run.withSuccessHandler)].join(' ')), 'true gas 2A function');
+    await p3.$eval('#mistRange', e => { e.value = 33; e.dispatchEvent(new Event('input')); }); await p3.click('#mistRec'); await p3.waitForTimeout(500);
+    assert.strictEqual(g3.get({ action: 'state', 'class': '2A' }).votes.mist[3], 1, '書き込んだあとのページから共有できていない'); assert.ok(calls3 > 0);
+    await p3.waitForTimeout(800); await p3.screenshot({ path: path.join(SHOTS, 'embed-loader-forest.png') });
+    /* 教材の置き場所が開けないとき：理由と直し方を出す */
+    await p3.route(origin + 'index.html', r => r.fulfill({ status: 404, body: 'nf' }));
+    await p3.goto(LOADER); await p3.waitForFunction(() => /読み込めませんでした/.test(document.body.textContent), null, { timeout: 15000 });
+    const tx = await p3.textContent('body'); assert.match(tx, /HTTP 404/); assert.match(tx, /Index/);
+    assert.deepStrictEqual(errs3.filter(e => !/404|Failed to load resource/.test(e)), [], 'コンソールエラー'); await c3.close();
   });
   assert.deepStrictEqual(page.errors, [], 'コンソールエラー'); await ctx.close();
 }

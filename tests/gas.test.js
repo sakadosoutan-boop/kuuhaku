@@ -59,35 +59,33 @@ t('PIN の総当たりはロック', () => { for (let i = 0; i < 9; i++) g.post(
 t('PIN 未設定', () => { const g2 = createGas({ pin: null }); delete g2.props.TEACHER_PIN; assert.strictEqual(g2.post({ action: 'admin', class: '2A', pin: '', op: 'list' }).error, 'nopin'); });
 t('setup が動く', () => { g.sandbox.setup(); assert.ok(g.sheets.has('classes')); });
 /* ---- 学校のドメイン内だけに公開する場合：GAS が教材の画面を配信する ---- */
-t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.2.0'));
-t('action なしの GET は教材の画面（HTML）を返す', () => {
+const fs = require('fs'), path = require('path');
+const SRC = fs.readFileSync(path.join(__dirname, '..', 'gas', 'Code.gs'), 'utf8');
+t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.2.1'));
+t('外部への通信の権限を求めない（UrlFetchApp を使わない。学校の管理設定で setup が止まらないように）', () => {
+  assert.ok(!/UrlFetchApp/.test(SRC), 'UrlFetchApp が残っている（外部通信の権限を求めてしまう）');
+  for (const svc of ['GmailApp', 'DriveApp', 'MailApp', 'CalendarApp', 'DocumentApp', 'Session.getActiveUser', 'openById', 'openByUrl']) assert.ok(!SRC.includes(svc), svc + ' を使っている（余計な権限を求める）');
+});
+t('action なしの GET は、教材を読み込む小さなページを返す', () => {
   const g2 = createGas({ pin: '1' });
   const o = g2.page({ 'class': '2A', scene: 'brush' });
   assert.ok(o.html.includes('window.KUUHAKU_EMBEDDED=true'), '埋め込みの印がない');
-  assert.ok(/<head>\s*<script>window\.KUUHAKU_EMBEDDED/.test(o.html), '<head> の直後に入っていない');
   assert.ok(o.html.includes('"https://sakadosoutan-boop.github.io/kuuhaku/"'), '教材の置き場所が入っていない');
   assert.ok(o.html.includes('https://script.google.com/a/macros/saitama.example/s/DEPLOY/exec'), '自分の URL が入っていない');
   assert.ok(o.html.includes('"class":"2A"') && o.html.includes('"scene":"brush"'));
+  assert.ok(/fetch\(B\+"index\.html"/.test(o.html), 'ブラウザで教材を取り寄せていない');
+  assert.ok(o.html.includes('document.write(h)'), '取り寄せた教材を書き込んでいない');
+  assert.ok(o.html.length < 6000, '読み込み役のページが大きすぎる ' + o.html.length);
   assert.strictEqual(o.title, '松林図をあるく'); assert.deepStrictEqual(o.meta[0][0], 'viewport'); assert.strictEqual(o.mode, 'ALLOWALL');
-  assert.deepStrictEqual(g2.net.log, ['https://sakadosoutan-boop.github.io/kuuhaku/index.html']);
+  assert.deepStrictEqual(g2.net.log, [], 'サーバー側で外部へ取りに行っている');
 });
-t('取得した教材は5分キャッシュされ、refresh=1 で取り直す', () => {
-  const g2 = createGas({ pin: '1' }); g2.page({}); g2.page({}); g2.page({});
-  assert.strictEqual(g2.net.log.length, 1, '2回目以降はキャッシュから');
-  g2.advance(301); g2.page({}); assert.strictEqual(g2.net.log.length, 2);
-  g2.page({ refresh: '1' }); assert.strictEqual(g2.net.log.length, 3);
-});
-t('Apps Script に貼った HTML ファイル「Index」を優先し、外部へ取りに行かない', () => {
+t('Apps Script に貼った HTML ファイル「Index」があれば、それをそのまま配信する', () => {
   const g2 = createGas({ pin: '1' }); g2.files.Index = '<!doctype html><html><head><title>t</title></head><body>' + 'y'.repeat(2000) + '</body></html>';
-  const o = g2.page({}); assert.ok(o.html.includes('yyyy') && o.html.includes('KUUHAKU_EMBEDDED')); assert.strictEqual(g2.net.log.length, 0);
+  const o = g2.page({}); assert.ok(o.html.includes('yyyy') && /<head>\s*<script>window\.KUUHAKU_EMBEDDED/.test(o.html)); assert.ok(!o.html.includes('document.write(h)'));
 });
 t('APP_URL をスクリプト プロパティで変えられる', () => {
   const g2 = createGas({ pin: '1' }); g2.props.APP_URL = 'https://example.github.io/my-kuuhaku'; const o = g2.page({});
-  assert.deepStrictEqual(g2.net.log, ['https://example.github.io/my-kuuhaku/index.html']); assert.ok(o.html.includes('"https://example.github.io/my-kuuhaku/"'));
-});
-t('教材を取得できないときは、原因を示すページを返す（例外にしない）', () => {
-  const g2 = createGas({ pin: '1' }); g2.net.code = 404; const o = g2.page({});
-  assert.ok(o.html.includes('教材を読み込めませんでした') && o.html.includes('404') && o.html.includes('APP_URL'));
+  assert.ok(o.html.includes('"https://example.github.io/my-kuuhaku/"'));
 });
 t('URL のパラメータに <script> を混ぜても、画面に注入されない', () => {
   const g2 = createGas({ pin: '1' }); const o = g2.page({ 'class': '2A"</script><script>alert(1)</script>', scene: '\u2028x' });
@@ -95,12 +93,12 @@ t('URL のパラメータに <script> を混ぜても、画面に注入されな
 });
 t('api()：google.script.run の入口が、これまでの API と同じ結果を返す', () => {
   const g2 = createGas({ pin: '2468' });
-  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.2.0');
+  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.2.1');
   assert.strictEqual(JSON.parse(g2.api('{bad')).error, 'badjson');
   const r = JSON.parse(g2.api(JSON.stringify({ action: 'post', 'class': '2A', client: 'apiclient001', text: '霧の奥', x: .4, y: .5 }))); assert.ok(r.ok);
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'state', 'class': '2A' }))).posts[0].text, '霧の奥');
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'admin', 'class': '2A', pin: 'x', op: 'list' }))).error, 'pin');
-  assert.strictEqual(typeof g2.sandbox.api, 'function'); assert.ok(!/_$/.test('api'), 'google.script.run は末尾が _ の関数を呼べない');
 });
 t('action 付きの GET は、これまでどおり JSON（公開範囲が「全員」の方式）', () => { const r = g.get({ action: 'ping' }); assert.ok(r.ok); });
+t('setup と check：紐づいたスプレッドシートで動き、版を返す', () => { const g2 = createGas({ pin: '1' }); assert.strictEqual(g2.sandbox.setup(), 'OK 1.2.1'); assert.strictEqual(g2.sandbox.check(), 'OK'); });
 console.log(`GAS API: ${n} 件すべて成功`);

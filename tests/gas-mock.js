@@ -27,7 +27,7 @@ function createGas({ pin = '1234' } = {}) {
       setFrozenRows: () => {},
     };
   }
-  const ss = { getSheetByName: n => sheets.get(n) || null, insertSheet: n => { const s = makeSheet(n); sheets.set(n, s); return s; } };
+  const ss = { getName: () => '空白の意味_共有', getSheetByName: n => sheets.get(n) || null, insertSheet: n => { const s = makeSheet(n); sheets.set(n, s); return s; } };
   const cacheStore = new Map();
   const props = { TEACHER_PIN: pin };
   const files = {};                                  // Apps Script に貼った HTML ファイル
