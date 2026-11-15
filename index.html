@@ -1653,10 +1653,28 @@ function checkText(text) {
 const ERR = {
   ng: 'その言葉は使えません。別の言葉で書いてみよう。', personal: '電話番号・メールアドレス・URL は書けません。', length: '1〜30字で書いてください。',
   rate: `少し待ってから書いてね（${CONFIG.POST_INTERVAL_SEC}秒に1回）。`, limit: `書けるのは1人${CONFIG.MAX_POSTS}個までです。`, closed: 'いまは受付を停止しています。',
-  class: 'ホームでクラスコードを入れてください。', client: '端末の識別に失敗しました。', network: '共有先につながりません。少し待ってもう一度。', pin: 'PIN がちがいます。',
+  class: 'ホームでクラスコードを入れてください。', client: '端末の識別に失敗しました。', network: '共有先につながりません。少し待ってもう一度。',
+  blocked: '共有先につながりません。先生に知らせてください。', timeout: '共有先の返事が遅れています。少し待ってもう一度。', offline: 'ネットワークにつながっていません。', http: '共有先がエラーを返しました。先生に知らせてください。', html: '共有先が正しく答えていません。先生に知らせてください。', pin: 'PIN がちがいます。',
   locked: 'PIN のまちがいが続いたため、10分間受け付けません。', nopin: 'GAS 側でスクリプト プロパティ TEACHER_PIN が設定されていません。', server: '共有先でエラーが起きました。', unknown: '共有先が古い版かもしれません。',
 };
 const errMsg = e => ERR[e] || ('エラー：' + e);
+/* 先生向け：つながらない理由と、直し方 */
+function diagnose(r, url) {
+  const dev = /\/dev(\?|$)/.test(url || '');
+  switch (r.error) {
+    case 'blocked':
+      return `つながりませんでした。次のどれかを確かめてください。\n① Apps Script の［デプロイ］→［デプロイを管理］→ 鉛筆 で「アクセスできるユーザー」が【全員】になっているか（「自分のみ」だとログイン画面に飛ばされて、この教材は読めません）。\n② 保存した URL が https://script.google.com/macros/s/…/exec で終わっているか。\n③ 学校のネットワークで script.google.com が止められていないか（スマホのモバイル回線で試すと切り分けられます）。\n④ 設定を直したら、［新バージョン］でデプロイし直してから、もう一度ためす。`;
+    case 'html':
+      return `GAS ではないページが返ってきました。${dev ? '末尾が /dev です。デプロイ画面の【ウェブアプリ】の URL（末尾が /exec）に入れ直してください。' : 'URL が古い・誤っているか、「アクセスできるユーザー」が【全員】でない可能性があります。デプロイを確かめてください。'}`;
+    case 'http':
+      return r.status === 404 ? 'URL が見つかりません（404）。デプロイを作り直した場合は、新しい URL に入れ替えてください。' : r.status === 401 || r.status === 403 ? `アクセスが断られました（${r.status}）。「アクセスできるユーザー」を【全員】にしてください。` : `共有先がエラーを返しました（${r.status}）。少し待ってからもう一度。`;
+    case 'timeout': return '15 秒待っても返事がありませんでした。回線の状態を確かめて、もう一度ためしてください（Apps Script は最初の呼び出しだけ遅いことがあります）。';
+    case 'offline': return 'この端末がネットワークにつながっていません。';
+    case 'unknown': return 'GAS は答えていますが、古い版のようです。gas/Code.gs の最新を貼り直し、［新バージョン］でデプロイしてください。';
+    case 'network': return '通信の途中で失敗しました。もう一度ためしてください。';
+    default: return errMsg(r.error);
+  }
+}
 
 /* =========================================================
    共有（GAS ウェブアプリ／なければ端末内のみ）
@@ -1676,12 +1694,21 @@ const Share = {
   async req(params, post) {
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const to = setTimeout(() => ctl && ctl.abort(), 15000);
+    let stage = 'fetch';
     try {
       let res;
       if (post) res = await fetch(this.url, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(params), signal: ctl && ctl.signal });
       else { const u = new URL(this.url); Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v)); res = await fetch(u.toString(), { redirect: 'follow', cache: 'no-store', signal: ctl && ctl.signal }); }
-      return await res.json();
-    } catch (e) { return { ok: false, error: 'network' }; } finally { clearTimeout(to); }
+      stage = 'read';
+      if (!res.ok) return { ok: false, error: 'http', status: res.status };
+      const text = await res.text();
+      try { return JSON.parse(text); } catch (_) { return { ok: false, error: 'html', head: text.slice(0, 120) }; }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return { ok: false, error: 'timeout' };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, error: 'offline' };
+      /* fetch が TypeError で落ちる＝つながらなかった／ログイン画面へ飛ばされた（CORS で読めない） */
+      return { ok: false, error: stage === 'fetch' ? 'blocked' : 'network' };
+    } finally { clearTimeout(to); }
   },
   async state() {
     if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; return this.req({ action: 'state', class: this.cls }); }
@@ -2180,7 +2207,7 @@ Screens.write = {
     requestAnimationFrame(() => { writeForest.resize(); writeForest.start(); });
     renderMyPosts(); updateShareNotes();
     writeUnsub = Share.subscribe(s => {
-      if (!s.ok) { $$('[data-share-note]').forEach(e => e.textContent = '共有：' + errMsg(s.error)); return; }
+      if (!s.ok) { $$('[data-share-note]').forEach(e => e.textContent = '共有：' + errMsg(s.error)); console.warn('共有に失敗', s.error, s.status || '', s.head || ''); return; }
       updateShareNotes(); $('#writeClosed').hidden = s.open !== false; wordsFrom(s, writeForest);
     });
   },
@@ -2676,12 +2703,15 @@ function validGas(u) { return u === '' || /^https:\/\/script\.google(usercontent
 $('#tGasSave').addEventListener('click', () => {
   const u = $('#tGas').value.trim(); const m = $('#tGasMsg');
   if (!validGas(u)) { m.textContent = 'https://script.google.com/ で始まる URL を入れてください。'; m.className = 'msg err'; return; }
+  if (u && /\/dev(\?|$)/.test(u)) { m.textContent = '末尾が /dev の URL は、自分だけが使う試験用です。デプロイ画面の【ウェブアプリ】の URL（末尾が /exec）を入れてください。'; m.className = 'msg err'; return; }
+  if (u && !/\/exec(\?|$)/.test(u)) { m.textContent = 'URL の末尾が /exec になっていません。デプロイ画面の【ウェブアプリ】の URL を、最後までコピーしてください。'; m.className = 'msg err'; return; }
   Store.set('gasUrl', u); Share.last = null; m.textContent = u ? '保存しました。「接続を確かめる」で確認できます。' : '端末内のみにしました。'; m.className = 'msg'; tRefreshCfg();
 });
 $('#tPing').addEventListener('click', async () => {
   const m = $('#tGasMsg'); if (Share.mode !== 'gas') { m.textContent = 'GAS の URL が設定されていません。'; return; }
-  m.textContent = '確かめています…'; const r = await Share.req({ action: 'ping' });
-  m.textContent = r.ok ? `つながりました（版 ${r.version}）` : errMsg(r.error); m.className = r.ok ? 'msg' : 'msg err';
+  m.textContent = '確かめています…'; m.className = 'msg'; const r = await Share.req({ action: 'ping' });
+  m.textContent = r.ok ? `つながりました（版 ${r.version}${r.version && r.version < '1.1' ? '：古い版です。gas/Code.gs の最新に更新してください' : ''}）` : diagnose(r, Share.url); m.className = r.ok ? 'msg' : 'msg err';
+  m.style.whiteSpace = 'pre-line';
 });
 $('#tLinkCopy').addEventListener('click', async () => { const t = $('#tLink').value; try { await navigator.clipboard.writeText(t); $('#tGasMsg').textContent = 'リンクをコピーしました'; } catch (e) { $('#tLink').select(); document.execCommand('copy'); } });
 

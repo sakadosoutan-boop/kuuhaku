@@ -408,6 +408,35 @@ async function gasFlow(browser, base) {
     await open(page, base, 'proj'); await page.waitForTimeout(1500);
     assert.match(await page.textContent('#projInfo'), /クラス 2A・1の言葉/);
   });
+  await step('つながらない理由を見分けて、直し方を示す（教員用）', async () => {
+    const ctx2 = await browser.newContext({ viewport: { width: 390, height: 800 }, locale: 'ja-JP' });
+    const p2 = await ctx2.newPage(); const errs2 = []; p2.on('pageerror', e => errs2.push(e.message));
+    const BAD = 'https://script.google.com/macros/s/BAD/exec';
+    await p2.goto(base + '?class=2a&gas=' + encodeURIComponent(BAD) + '#/teacher'); await p2.waitForSelector('#s-teacher.on');
+    const ping = async (handler) => { await p2.unroute(BAD + '**').catch(() => {}); await p2.route(BAD + '**', handler); await p2.click('#tPing'); await p2.waitForFunction(() => !/確かめています/.test(document.querySelector('#tGasMsg').textContent), null, { timeout: 20000 }); return p2.textContent('#tGasMsg'); };
+    // ① ログイン画面へ飛ばされる（アクセスできるユーザーが「全員」でない）：CORS で読めず fetch が失敗する
+    let t = await ping(r => r.abort('failed')); assert.match(t, /アクセスできるユーザー/); assert.match(t, /全員/); assert.match(t, /\/exec/);
+    // ② HTML が返る（ログインページ・エラーページ）
+    t = await ping(r => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Sign in</title>' })); assert.match(t, /GAS ではないページ/);
+    // ③ 404（URL が古い）
+    t = await ping(r => r.fulfill({ status: 404, contentType: 'text/html', body: 'not found' })); assert.match(t, /404/); assert.match(t, /新しい URL/);
+    // ④ 403
+    t = await ping(r => r.fulfill({ status: 403, contentType: 'text/html', body: 'forbidden' })); assert.match(t, /全員/);
+    // ⑤ 古い版の GAS（ping に unknown を返す）
+    t = await ping(r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: false, error: 'unknown' }) })); assert.match(t, /古い版/);
+    // ⑥ 成功
+    t = await ping(r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ ok: true, version: '1.1.0' }) })); assert.match(t, /つながりました（版 1\.1\.0）/);
+    // ⑦ 保存時に URL の形をとがめる
+    await p2.fill('#tGas', 'https://script.google.com/macros/s/AKfy123/dev'); await p2.click('#tGasSave'); assert.match(await p2.textContent('#tGasMsg'), /\/dev/);
+    await p2.fill('#tGas', 'https://script.google.com/macros/s/AKfy123/'); await p2.click('#tGasSave'); assert.match(await p2.textContent('#tGasMsg'), /\/exec/);
+    await p2.fill('#tGas', 'https://script.google.com/macros/s/AKfy123/exec'); await p2.click('#tGasSave'); assert.match(await p2.textContent('#tGasMsg'), /保存しました/);
+    // ⑧ 生徒の画面は、短くやさしい文言（専門語を出さない）
+    await p2.route('https://script.google.com/macros/s/AKfy123/exec**', r => r.abort('failed'));
+    await p2.goto(base + '#/write'); await p2.waitForSelector('#s-write.on'); await p2.waitForTimeout(1500);
+    const note = await p2.textContent('#s-write [data-share-note]'); assert.match(note, /先生に知らせてください/); assert.doesNotMatch(note, /デプロイ|CORS|アクセスできるユーザー/);
+    assert.deepStrictEqual(errs2, []); await ctx2.close();
+  });
+
   await step('ポーリングは画面を離れると止まる', async () => {
     await open(page, base, 'home'); await page.waitForTimeout(300); const n = calls.length; await page.waitForTimeout(2500);
     assert.strictEqual(calls.length, n);
