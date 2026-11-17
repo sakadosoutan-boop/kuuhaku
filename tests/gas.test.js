@@ -61,7 +61,7 @@ t('setup が動く', () => { g.sandbox.setup(); assert.ok(g.sheets.has('classes'
 /* ---- 学校のドメイン内だけに公開する場合：GAS が教材の画面を配信する ---- */
 const fs = require('fs'), path = require('path');
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'gas', 'Code.gs'), 'utf8');
-t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.3.0'));
+t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.3.1'));
 t('外部への通信の権限を求めない（UrlFetchApp を使わない。学校の管理設定で setup が止まらないように）', () => {
   assert.ok(!/UrlFetchApp/.test(SRC), 'UrlFetchApp が残っている（外部通信の権限を求めてしまう）');
   for (const svc of ['GmailApp', 'DriveApp', 'MailApp', 'CalendarApp', 'DocumentApp', 'openById', 'openByUrl']) assert.ok(!SRC.includes(svc), svc + ' を使っている（余計な権限を求める）');
@@ -93,14 +93,14 @@ t('URL のパラメータに <script> を混ぜても、画面に注入されな
 });
 t('api()：google.script.run の入口が、これまでの API と同じ結果を返す', () => {
   const g2 = createGas({ pin: '2468' });
-  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.3.0');
+  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.3.1');
   assert.strictEqual(JSON.parse(g2.api('{bad')).error, 'badjson');
   const r = JSON.parse(g2.api(JSON.stringify({ action: 'post', 'class': '2A', client: 'apiclient001', text: '霧の奥', x: .4, y: .5 }))); assert.ok(r.ok);
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'state', 'class': '2A' }))).posts[0].text, '霧の奥');
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'admin', 'class': '2A', pin: 'x', op: 'list' }))).error, 'pin');
 });
 t('action 付きの GET は、これまでどおり JSON（公開範囲が「全員」の方式）', () => { const r = g.get({ action: 'ping' }); assert.ok(r.ok); });
-t('setup と check：紐づいたスプレッドシートで動き、版を返す', () => { const g2 = createGas({ pin: '1' }); assert.strictEqual(g2.sandbox.setup(), 'OK 1.3.0'); assert.strictEqual(g2.sandbox.check(), 'OK'); });
+t('setup と check：紐づいたスプレッドシートで動き、版を返す', () => { const g2 = createGas({ pin: '1' }); assert.strictEqual(g2.sandbox.setup(), 'OK 1.3.1'); assert.strictEqual(g2.sandbox.check(), 'OK'); });
 /* ---- 生徒の記録：学校のアカウントで見分けて、続きから再開できる ---- */
 t('記録：ログインしていなければ signed:false（保存もしない）', () => {
   const g2 = createGas({ pin: '1' });

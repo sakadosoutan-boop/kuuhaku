@@ -23,7 +23,7 @@
  *   HTML ファイル「Index」として貼り付ければ、そちらを使う。
  */
 var APP_URL = 'https://sakadosoutan-boop.github.io/kuuhaku/';
-var VERSION = '1.3.0';
+var VERSION = '1.3.1';
 var CFG = {
   MAX_LEN: 30,               // 投稿の最大文字数
   POST_INTERVAL_SEC: 15,     // 同じ端末の連投間隔
@@ -304,7 +304,7 @@ function me_() {
   if (!key) return { ok: true, signed: false };
   var f = findProgress_(key), data = null;
   if (f) { try { data = JSON.parse(String(f.row[2])); } catch (err) { data = null; } }
-  return { ok: true, signed: true, who: key, progress: data, updated: f ? timeOf_(f.row[3]) : 0 };
+  return { ok: true, signed: true, who: key, progress: data, 'class': f ? String(f.row[1] || '') : '', updated: f ? timeOf_(f.row[3]) : 0 };
 }
 function save_(p) {
   var key = userKey_();

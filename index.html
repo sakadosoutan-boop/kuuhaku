@@ -401,6 +401,23 @@ details.about summary{cursor:pointer;color:var(--sumi);font-size:.88rem;min-heig
 .cloudnote::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--usuzumi);flex:none}
 .cloudnote.ok::before{background:#3f6b4a}
 .cloudnote.err::before{background:#7a2b22}
+.labfig.half{padding:10px;background:#efe9db}
+.halfwrap{position:relative;width:min(100%,420px);margin:0 auto;aspect-ratio:831/1200;overflow:hidden;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.halfwrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.halfcover{position:absolute;inset:0;background:#f3eee2;clip-path:polygon(0 0,100% 0,100% 59%,93% 58.5%,88% 55%,83% 51%,70% 50%,30% 50%,20% 51.5%,17% 56.5%,10% 57.5%,0 57.5%);transition:transform 1.4s cubic-bezier(.6,0,.2,1),opacity 1.4s;display:flex;align-items:flex-start;justify-content:center;padding-top:20%}
+.halfcover::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.halfcover span{position:relative;font-family:var(--mincho);font-size:clamp(2.6rem,12vw,4.4rem);color:rgba(0,0,0,.18)}
+.halfwrap.open .halfcover{transform:translateY(-62%);opacity:0}
+.halfwrap.open img{animation:halfin 1.6s ease}
+@keyframes halfin{from{filter:brightness(1.08)}to{filter:none}}
+@media (prefers-reduced-motion:reduce){.halfcover{transition:none}}
+#tClassLinks details{border-bottom:1px solid var(--line);padding:4px 0}
+#tClassLinks summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;font-weight:700;list-style:none}
+#tClassLinks summary::-webkit-details-marker{display:none}
+#tClassLinks summary::after{content:"場面 ▾";margin-left:auto;font-weight:400;font-size:.8rem;color:var(--sumi)}
+#tClassLinks details[open] summary::after{content:"とじる ▴"}
+#tClassLinks .links{margin:0 0 8px 12px}
+.classprompt{border:2px solid var(--ink)!important}
 /* ---- 全画面 ---- */
 .hud{max-width:min(72%,460px)}
 .xp .badge{top:auto;bottom:34px;left:10px}
@@ -479,7 +496,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
       <input id="classInput" maxlength="16" autocomplete="off" placeholder="例 2A">
       <button class="btn" id="classSave">決定</button>
     </div>
-    <p class="note" style="margin:.4rem 0 0">先生から伝えられた英数字を入れます。名前は入れません。</p>
+    <p class="note" style="margin:.4rem 0 0">先生から伝えられたクラスの英数字（例 2A）を入れます。入れると、そのクラスの友だちと言葉や投票を共有できます。名前は入れません。</p>
   </div>
 
   <h2>きょうの道のり</h2>
@@ -518,7 +535,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <p>（要旨）空白は「無」や「エネルギーの不在」ではなく「機前の可能性」である。空っぽの器を無価値と見ず、何かが入る「予兆」と見立てる創造性。</p></details>
   <p class="q">描かれていないものが「見える」のは、なぜだろう。</p>
   <div class="labdots" id="labDots" role="tablist">
-    <button data-i="0">1 三角形</button><button data-i="1">2 隠した絵</button><button data-i="2">3 ぼかし絵</button><button data-i="3">4 2コマ</button>
+    <button data-i="0">1 三角形</button><button data-i="1">2 隠した絵</button><button data-i="2">3 ぼかし絵</button><button data-i="3">4 2コマ</button><button data-i="4">5 上半分</button>
   </div>
 
   <div class="labstep" data-step="0">
@@ -552,6 +569,15 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <p><b>左のコマと右のコマのあいだで、何が起きた？</b> 真ん中は描かれていません。想像を書いてからタップ。</p>
     <div class="guess"><label for="mangaGuess" class="sr">あいだのコマの予想</label><input id="mangaGuess" maxlength="30" autocomplete="off" placeholder="あいだで起きたのは……"></div>
     <p class="note" id="mangaNote"></p>
+  </div>
+
+  <div class="labstep" data-step="4">
+    <div class="labfig half"><div class="halfwrap" id="halfWrap"><img id="halfImg" alt="歌川広重「名所江戸百景・深川洲崎十万坪」。上半分は隠されている" width="831" height="1200" decoding="async"><div class="halfcover" id="halfCover" aria-hidden="true"><span>？</span></div></div></div>
+    <p><b>隠れた上半分には、何が描かれているだろう。</b> 見えている下半分（雪の原と、遠くの山）だけを手がかりに、予想を書いてから、めくろう。</p>
+    <div class="guess"><label for="halfGuess" class="sr">隠れた上半分の予想</label><input id="halfGuess" maxlength="30" autocomplete="off" placeholder="上半分にあるのは……"></div>
+    <div class="row"><button class="btn primary" id="halfBtn" aria-pressed="false">上半分をめくる</button></div>
+    <p class="note" id="halfNote"></p>
+    <p class="credit">出典：<a href="https://colbase.nich.go.jp/collection_items/tnm/A-10569-7398" target="_blank" rel="noopener">ColBase（国立文化財機構所蔵品統合検索システム）「名所江戸百景・深川洲崎十万坪」</a>　歌川広重筆／江戸時代・安政4年（1857）／東京国立博物館蔵。画像を縮小し、上半分を隠す仕掛けを加えています（この教材による加工）。</p>
     <div class="card labsum" id="labSum" hidden></div>
   </div>
 
@@ -748,6 +774,10 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <h3>場面リンク</h3>
     <p class="note">その画面から始まるリンクです（クラスコードと共有先つき）。授業の途中で配り直すときに。</p>
     <ul class="links" id="tLinks"></ul>
+    <h3>クラスごとのリンク</h3>
+    <label for="tClasses" class="note">受け持つクラスのコードを、カンマか空白で区切って入れると、クラスごとの入口と場面リンクをまとめて作ります（例：2A, 2B, 2C）。</label>
+    <div class="field"><input id="tClasses" class="wide" autocomplete="off" placeholder="2A, 2B, 2C" style="text-transform:uppercase"></div>
+    <div id="tClassLinks"></div>
   </div>
 
   <div class="card">
@@ -1821,6 +1851,7 @@ const Cloud = {
     /* 同じブラウザで別の人がログインしたら、前の人の記録は持ち込まない */
     if (d.progOwner && d.progOwner !== r.who) { Object.assign(d, PROG_DEFAULT()); d.progSync = ''; d.progAt = 0; d.progDirty = false; }
     d.progOwner = r.who;
+    if (!d.classCode && r.class) { d.classCode = r.class; Share.last = null; if (typeof updateShareNotes === 'function') updateShareNotes(); }
     const srv = r.progress, srvAt = r.updated || 0, localAt = d.progAt || 0;
     let restored = false;
     if (srv && srvAt > localAt) {
@@ -1922,7 +1953,7 @@ const TRAIL = [
 ];
 function trailDone() {
   const d = Store.d, L = d.lab || {};
-  return { 'check/pre': !!d.pre, lab: !!(L.kz || L.hide || L.blur || L.manga), brush: d.brushVote != null, forest: d.mistBest != null, write: d.myPosts.length > 0, reflect: !!d.post };
+  return { 'check/pre': !!d.pre, lab: !!(L.kz || L.hide || L.blur || L.manga || L.half), brush: d.brushVote != null, forest: d.mistBest != null, write: d.myPosts.length > 0, reflect: !!d.post };
 }
 function renderTrail() {
   const done = trailDone(), next = TRAIL.find(t => !done[t[0]]);
@@ -1936,6 +1967,9 @@ Screens.home = {
   enter() {
     $('#classInput').value = Store.d.classCode || '';
     updateShareNotes(); renderTrail();
+    const need = Share.mode === 'gas' && !Share.cls;
+    $('#classBox').classList.toggle('classprompt', need);
+    if (need) { $('#classBox').hidden = false; $('#classChip').setAttribute('aria-expanded', 'true'); }
     if (!hero) hero = new Forest($('#heroCv'), { mist: 0.74, walk: false, seed: 3, auto: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 0.07 });
     requestAnimationFrame(() => { hero.resize(); hero.start(); });
   },
@@ -2045,23 +2079,24 @@ Screens.lab = {
     buildKanizsa(); buildManga(); drawHide(); drawBlur(); this.go(labI);
     const L = Store.d.lab || {};
     $$('#kzAns button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kz === L.kz)));
-    $('#hideGuess').value = L.hide || ''; $('#mangaGuess').value = L.manga || '';
+    $('#hideGuess').value = L.hide || ''; $('#mangaGuess').value = L.manga || ''; $('#halfGuess').value = L.half || '';
     renderBlurHist(null); labSummary();
     this.unsub = Share.subscribe(st => { if (st.ok) renderBlurHist(st.votes && st.votes.blur); });
   },
   leave() { this.unsub && this.unsub(); this.unsub = null; },
   go(i) {
-    labI = clamp(i, 0, 3);
+    labI = clamp(i, 0, 4);
+    if (labI === 4 && !$('#halfImg').src) $('#halfImg').src = BASE + 'assets/lab-hiroshige-jumantsubo.jpg';
     $$('.labstep').forEach(s => s.classList.toggle('on', +s.dataset.step === labI));
     $$('#labDots button').forEach(b => b.setAttribute('aria-current', String(+b.dataset.i === labI)));
     $('#labPrev').disabled = labI === 0;
-    $('#labNext').textContent = labI === 3 ? '次へ：描き込みスライダー →' : '次の実験 →';
+    $('#labNext').textContent = labI === 4 ? '次へ：描き込みスライダー →' : '次の実験 →';
   },
 };
 function labSet(k, v) { const L = Object.assign({}, Store.d.lab); L[k] = v; Store.set('lab', L); labSummary(); if (current === 'lab') renderJourney('lab'); }
 function labSummary() {
   const L = Store.d.lab || {}, el = $('#labSum');
-  const items = [L.kz && `見えない三角形：${L.kz}`, L.hide && `霧で隠れた所：「${L.hide}」と予想`, L.blur && `ぼかし絵：${L.blur}段階目でわかった`, L.manga && `2コマのあいだ：「${L.manga}」と予想`].filter(Boolean);
+  const items = [L.kz && `見えない三角形：${L.kz}`, L.hide && `霧で隠れた所：「${L.hide}」と予想`, L.blur && `ぼかし絵：${L.blur}段階目でわかった`, L.manga && `2コマのあいだ：「${L.manga}」と予想`, L.half && `隠れた上半分：「${L.half}」と予想`].filter(Boolean);
   el.hidden = !items.length;
   el.innerHTML = `<b>あなたが補ったもの</b><ul>${items.map(t => `<li>${esc(t)}</li>`).join('')}</ul><p class="note" style="margin:0">どれも、描かれていない所を、あなたの頭が満たしたあとです。振り返りの記録にも入ります。</p>`;
 }
@@ -2073,6 +2108,14 @@ function renderBlurHist(bins) {
 $('#kzAns').addEventListener('click', e => { const b = e.target.closest('button[data-kz]'); if (!b) return; $$('#kzAns button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); labSet('kz', b.dataset.kz); });
 $('#hideGuess').addEventListener('change', e => labSet('hide', e.target.value.trim().slice(0, 30)));
 $('#mangaGuess').addEventListener('change', e => labSet('manga', e.target.value.trim().slice(0, 30)));
+$('#halfGuess').addEventListener('change', e => labSet('half', e.target.value.trim().slice(0, 30)));
+$('#halfBtn').addEventListener('click', e => {
+  const w = $('#halfWrap'), open = !w.classList.contains('open'), b = e.currentTarget;
+  if (open && $('#halfGuess').value.trim()) labSet('half', $('#halfGuess').value.trim().slice(0, 30));
+  if (open && !$('#halfGuess').value.trim() && !b.dataset.nudged) { b.dataset.nudged = '1'; $('#halfNote').textContent = 'めくる前に、予想を一言だけ書いてみよう（書かずにめくることもできます。もう一度押してください）。'; $('#halfGuess').focus(); return; }
+  w.classList.toggle('open', open); b.setAttribute('aria-pressed', String(open)); b.textContent = open ? 'もう一度隠す' : '上半分をめくる';
+  $('#halfNote').textContent = open ? '上半分には、空をおおうほどの大きな鷲。下半分の静かな雪の原から、この鷲を思い浮かべた人は少ないはずです。私たちは見えている所から「続き」を補いますが、補えるのは自分の経験の範囲まで。白の向こうには、その想像を超えるものも隠れています。予想と比べて、どう感じただろう。' : '';
+});
 $('#blurGot').addEventListener('click', async e => {
   const step = blurLv + 1, b = e.currentTarget; labSet('blur', step); b.disabled = true;
   const r = await Share.vote('blur', step * 20 - 10); b.disabled = false;
@@ -2081,7 +2124,7 @@ $('#blurGot').addEventListener('click', async e => {
 });
 $('#labDots').addEventListener('click', e => { const b = e.target.closest('button'); if (b) Screens.lab.go(+b.dataset.i); });
 $('#labPrev').addEventListener('click', () => Screens.lab.go(labI - 1));
-$('#labNext').addEventListener('click', () => { if (labI === 3) location.hash = '#/brush'; else Screens.lab.go(labI + 1); });
+$('#labNext').addEventListener('click', () => { if (labI === 4) location.hash = '#/brush'; else Screens.lab.go(labI + 1); });
 function buildKanizsa(showLine) {
   const cx = 160, cy = 160, R = 105, rr = 34, V = [0, 1, 2].map(k => { const a = -Math.PI / 2 + k * 2 * Math.PI / 3; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
   let s = '';
@@ -2368,7 +2411,7 @@ function buildReport() {
     `クラスコード：${Share.cls || '―'}`,
     `空白うめたい度：前 ${ty(ps)} → 後 ${ty(qs)}`,
     `  後の回答：${Store.d.post ? Store.d.post.join(' / ') : '―'}`,
-    `補完ラボ：三角形 ${(Store.d.lab || {}).kz || '―'}／隠れた所「${(Store.d.lab || {}).hide || '―'}」／ぼかし絵 ${(Store.d.lab || {}).blur ? Store.d.lab.blur + '段階目でわかった' : '―'}／2コマのあいだ「${(Store.d.lab || {}).manga || '―'}」`,
+    `補完ラボ：三角形 ${(Store.d.lab || {}).kz || '―'}／隠れた所「${(Store.d.lab || {}).hide || '―'}」／ぼかし絵 ${(Store.d.lab || {}).blur ? Store.d.lab.blur + '段階目でわかった' : '―'}／2コマのあいだ「${(Store.d.lab || {}).manga || '―'}」／上半分「${(Store.d.lab || {}).half || '―'}」`,
     `靄スライダー：いちばん広く深く感じた濃さ ${Store.d.mistBest ?? '―'}`,
     `描き込みスライダー：いちばん松らしい位置 ${bv ?? '―'}${bv == null ? '' : bv < 30 ? '（精緻寄り）' : bv < 68 ? '（精緻と朦朧のあいだ）' : '（荒い筆寄り）'}`,
     '白の向こうに書いた言葉：',
@@ -2770,12 +2813,20 @@ function askConfirm(msg) {
 }
 /* ---------- 教員用 ---------- */
 let tPin = ''; try { tPin = sessionStorage.getItem('kuuhaku.pin') || ''; } catch (e) {}
-function studentLink(scene) {
-  if (EMBED) { const base = window.KUUHAKU_SELF || location.href.split('#')[0]; const q = []; if (Share.cls) q.push('class=' + encodeURIComponent(Share.cls)); if (scene) q.push('scene=' + scene); return base + (q.length ? '?' + q.join('&') : ''); }
-  const u = new URL(location.href); u.hash = ''; u.search = ''; if (Share.cls) u.searchParams.set('class', Share.cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString() + (scene ? '#/' + scene : '');
+function studentLink(scene, cls = Share.cls) {
+  if (EMBED) { const base = window.KUUHAKU_SELF || location.href.split('#')[0]; const q = []; if (cls) q.push('class=' + encodeURIComponent(cls)); if (scene) q.push('scene=' + scene); return base + (q.length ? '?' + q.join('&') : ''); }
+  const u = new URL(location.href); u.hash = ''; u.search = ''; if (cls) u.searchParams.set('class', cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString() + (scene ? '#/' + scene : '');
 }
-const SCENES = [['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['real', '実物を見る'], ['byobu', '屏風モード'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
-function renderLinks() { $('#tLinks').innerHTML = SCENES.map(([h, n]) => `<li><span>${n}</span><button class="btn" data-link="${esc(studentLink(h))}">コピー</button></li>`).join(''); }
+const SCENES = [['check/pre', '前 うめたい度チェック'], ['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['real', '実物を見る'], ['byobu', '屏風モード'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
+function renderLinks() {
+  $('#tLinks').innerHTML = SCENES.map(([h, n]) => `<li><span>${n}</span><button class="btn" data-link="${esc(studentLink(h))}">コピー</button></li>`).join('');
+  const list = parseClasses(Store.d.classList || '');
+  $('#tClasses').value = list.join(', ');
+  $('#tClassLinks').innerHTML = list.map(c => `<details><summary>${esc(c)}<button class="btn" data-link="${esc(studentLink('', c))}">入口をコピー</button></summary><ul class="links">${SCENES.map(([h, n]) => `<li><span>${n}</span><button class="btn" data-link="${esc(studentLink(h, c))}">コピー</button></li>`).join('')}</ul></details>`).join('');
+}
+function parseClasses(t) { return [...new Set(String(t).toUpperCase().split(/[\s,、，]+/).map(c => c.replace(/[^A-Z0-9_-]/g, '').slice(0, 16)).filter(Boolean))].slice(0, 20); }
+$('#tClasses').addEventListener('change', e => { Store.set('classList', parseClasses(e.target.value).join(',')); renderLinks(); });
+$('#tClassLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; e.preventDefault(); const label = b.textContent; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { toast('コピーできませんでした', 3000); } setTimeout(() => { b.textContent = label; }, 1500); });
 $('#tLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { toast('コピーできませんでした。下の欄から選んでコピーしてください', 4000); } setTimeout(() => { b.textContent = 'コピー'; }, 1500); });
 function tRefreshCfg() { renderLinks(); if (EMBED) { $('#tEmbedNote').hidden = false; for (const id of ['#tGas', '#tGasSave']) { const el = $(id); (el.closest('.field') || el).hidden = true; el.hidden = true; } $('label[for=tGas]').hidden = true; } $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
 function tRender(r) {

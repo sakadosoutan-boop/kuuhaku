@@ -105,7 +105,16 @@ async function localFlow(browser, base, vp, name) {
     assert.strictEqual(await page.locator('#blurHist .bar.mine b').textContent(), '1');
     for (let i = 0; i < 2; i++) await page.click('#blurBtn'); assert.match(await page.textContent('#blurNote'), /ねこ/); await page.shot('03e-lab-blur-5');
     await page.click('#labNext'); await page.fill('#mangaGuess', 'コップが落ちた'); await page.click('#mangaGap'); assert.match(await page.textContent('#mangaNote'), /コマとコマ/);
-    const sum = await page.textContent('#labSum'); for (const re of [/三角形：見えた/, /幹が続いている/, /3段階目/, /コップが落ちた/]) assert.match(sum, re);
+    /* 5 上半分：予想を書いてからめくる */
+    await page.click('#labNext'); await page.waitForSelector('.labstep[data-step="4"].on');
+    await page.waitForFunction(() => document.querySelector('#halfImg').complete && document.querySelector('#halfImg').naturalWidth > 0, null, { timeout: 10000 });
+    assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector('#halfCover')).opacity === '1'), '上半分が隠れていない');
+    await page.click('#halfBtn'); assert.match(await page.textContent('#halfNote'), /予想を一言/);                       /* 書かずに押すと、一度だけ促す */
+    await page.fill('#halfGuess', '青い空と雲'); await page.click('#halfBtn'); await page.waitForTimeout(1600);
+    assert.match(await page.textContent('#halfNote'), /鷲/); assert.ok(await page.evaluate(() => document.querySelector('#halfWrap').classList.contains('open')));
+    assert.match(await page.textContent('#s-lab .credit'), /深川洲崎十万坪/);
+    await page.shot('04b-lab-half');
+    const sum = await page.textContent('#labSum'); for (const re of [/三角形：見えた/, /幹が続いている/, /3段階目/, /コップが落ちた/, /上半分：「青い空と雲」/]) assert.match(sum, re);
     await page.shot('04-lab-manga');
     await page.click('#labNext'); await page.waitForURL(/#\/brush/);
   });
@@ -274,8 +283,16 @@ async function localFlow(browser, base, vp, name) {
     assert.ok(await page.locator('#tPosts li.hid').count() === 1);
     const st = await page.evaluate(() => Share.state()); assert.strictEqual(st.posts.length, 0);
     await page.click('#tPosts button[data-op=unhide]'); await page.waitForTimeout(200);
-    assert.strictEqual(await page.locator('#tLinks li').count(), 9);
-    assert.match(await page.getAttribute('#tLinks li:nth-child(2) button', 'data-link'), /#\/brush$/);
+    assert.strictEqual(await page.locator('#tLinks li').count(), 10);
+    assert.match(await page.getAttribute('#tLinks li:nth-child(1) button', 'data-link'), /#\/check\/pre$/);
+    assert.match(await page.getAttribute('#tLinks li:nth-child(3) button', 'data-link'), /#\/brush$/);
+    /* クラスごとのリンク：複数クラスをまとめて作る */
+    await page.fill('#tClasses', '2a, 2B　2c,2a'); await page.dispatchEvent('#tClasses', 'change');
+    assert.strictEqual(await page.inputValue('#tClasses'), '2A, 2B, 2C');
+    assert.strictEqual(await page.locator('#tClassLinks details').count(), 3);
+    assert.match(await page.getAttribute('#tClassLinks details:nth-child(2) summary button', 'data-link'), /[?&]class=2B(?!.*#)/);
+    assert.match(await page.getAttribute('#tClassLinks details:nth-child(3) li:nth-child(3) button', 'data-link'), /class=2C.*#\/brush$/);
+    await page.fill('#tClasses', ''); await page.dispatchEvent('#tClasses', 'change');
     await page.shot('12-teacher');
   });
 
@@ -489,8 +506,10 @@ async function embedFlow(browser, base) {
     assert.ok(await page.isVisible('#tEmbedNote')); assert.ok(await page.isHidden('#tGas'));
     await page.fill('#tPin', '2468'); await page.click('#tLogin'); await page.waitForTimeout(600);
     assert.match(await page.inputValue('#tLink'), /^https:\/\/script\.google\.com\/a\/macros\/saitama\.example\/s\/DEPLOY\/exec\?class=2A$/);
-    assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(3) button', 'data-link'), SELF + '?class=2A&scene=forest');
-    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent("#tGasMsg"), /版 1\.3\.0/);
+    assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(4) button', 'data-link'), SELF + '?class=2A&scene=forest');
+    assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(1) button', 'data-link'), SELF + '?class=2A&scene=check/pre');
+    await page.fill('#tClasses', '2B'); await page.dispatchEvent('#tClasses', 'change'); assert.strictEqual(await page.getAttribute('#tClassLinks summary button', 'data-link'), SELF + '?class=2B');
+    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent("#tGasMsg"), /版 1\.3\.1/);
   });
   await step('配信ページ：教員の操作（非表示・全消去）。確認はページ内のダイアログ', async () => {
     assert.match(await page.textContent('#tPosts'), /霧の向こうの港/);
@@ -532,7 +551,9 @@ async function embedFlow(browser, base) {
     assert.deepStrictEqual(saved.pre, [1, 2, 3, 4, 1, 2]); assert.strictEqual(saved.brushVote, 88);
     /* 2日目：別の Chromebook ②（何も残っていない）で同じアカウント → 続きから */
     const d2 = await device(A);
+    await d2.pg.addInitScript(() => { window.KUUHAKU_PARAMS = {}; });   /* 2台目はクラスコードなしのリンクで開く */
     await d2.pg.goto(base.split('#')[0]); await d2.pg.waitForSelector('#s-home.on'); await d2.pg.waitForFunction(() => Cloud.state === 'saved');
+    assert.strictEqual(await d2.pg.evaluate(() => Share.cls), '2A', 'クラスコードが記録から引き継がれていない');
     assert.deepStrictEqual(await d2.pg.evaluate(() => [Store.d.pre, Store.d.brushVote]), [[1, 2, 3, 4, 1, 2], 88]);
     await d2.pg.waitForFunction(() => document.querySelectorAll('#trail li.done').length >= 2, null, { timeout: 5000 });
     assert.match(await d2.pg.textContent('#startBtn'), /つづきから：補完ラボ/);   // 飛ばした補完ラボが次
@@ -554,6 +575,23 @@ async function embedFlow(browser, base) {
     /* シートにはメールアドレスが残らない */
     assert.ok(!JSON.stringify(g4.sheets.get('progress').data).includes('saitama.example'));
     for (const d of [d1, d2]) { assert.deepStrictEqual(d.pg.errs, []); await d.c.close(); }
+  });
+
+  await step('クラスコードなしのリンクで開いた生徒は、ホームでクラスを入れるとそのクラスに入れる', async () => {
+    const g5 = createGas({ pin: '2468' });
+    const c5 = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, locale: 'ja-JP' });
+    const p5 = await c5.newPage(); const errs5 = []; p5.on('pageerror', e => errs5.push(e.message));
+    await p5.exposeFunction('__gasApi', json => { g5.advance(1); return g5.apiAs('st020@saitama.example', json); });
+    await p5.addInitScript(({ origin, SELF }) => { window.KUUHAKU_EMBEDDED = true; window.KUUHAKU_BASE = origin; window.KUUHAKU_SELF = SELF; window.KUUHAKU_PARAMS = {}; const mk = (ok, ng) => ({ withSuccessHandler: f => mk(f, ng), withFailureHandler: f => mk(ok, f), api: json => { window.__gasApi(json).then(r => ok && ok(r), e => ng && ng(e)); } }); window.google = { script: { run: mk(null, null) } }; }, { origin, SELF });
+    await p5.goto(base.split('#')[0]); await p5.waitForSelector('#s-home.on');
+    assert.ok(await p5.isVisible('#classBox'), 'クラスの入力欄が開いていない'); assert.ok(await p5.evaluate(() => document.querySelector('#classBox').classList.contains('classprompt')));
+    await p5.fill('#classInput', '2c'); await p5.click('#classSave'); await p5.waitForTimeout(300);
+    assert.strictEqual(await p5.evaluate(() => Share.cls), '2C'); assert.ok(await p5.isHidden('#classBox'));
+    await open(p5, base, 'brush'); await p5.$eval('#brushRange', e => { e.value = 55; e.dispatchEvent(new Event('input')); }); await p5.click('#brushVote'); await p5.waitForTimeout(500);
+    assert.strictEqual(g5.get({ action: 'state', 'class': '2C' }).votes.brush[5], 1, '入れたクラスに投票が入っていない');
+    await p5.waitForFunction(() => Cloud.state === 'saved' && !Store.d.progDirty, null, { timeout: 15000 });
+    assert.strictEqual(JSON.parse(g5.apiAs('st020@saitama.example', '{"action":"me"}')).class, '2C', 'クラスが記録に残っていない');
+    assert.deepStrictEqual(errs5, []); await c5.close();
   });
 
   await step('読み込み役のページ：ブラウザが教材を取り寄せて書き込み、そのまま google.script.run で共有できる', async () => {
