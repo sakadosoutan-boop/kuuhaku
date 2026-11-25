@@ -272,6 +272,8 @@ async function localFlow(browser, base, vp, name) {
   await step('投影モード', async () => {
     await open(page, base, 'proj'); await page.waitForTimeout(2500);
     assert.match(await page.textContent('#projInfo'), /1の言葉/);
+    await page.waitForFunction(() => projForest.words && projForest.words.some(w => w.spr), null, { timeout: 15000 }).catch(() => { throw new Error('投影モードで言葉が描かれていない（大きさ=' + 'NaN/0 の可能性）'); });
+    assert.ok(await page.evaluate(() => projForest.wordSize() >= 18), '言葉の大きさが決まっていない');
     await page.click('#projHistBtn'); await page.waitForTimeout(200); await page.shot('11-proj');
     assert.ok(await page.locator('#projBrushHist .bar i').nth(9).evaluate(e => e.getBoundingClientRect().height > 20), '投影の分布が見えない');
   });

@@ -1549,6 +1549,8 @@ class Forest {
     const hb = g.createLinearGradient(0, hz - 3, 0, hz + H * 0.05); hb.addColorStop(0, ink(0)); hb.addColorStop(0.3, ink(0.16)); hb.addColorStop(1, ink(0)); g.globalAlpha = A; g.fillStyle = hb; g.fillRect(0, hz - 3, W, H * 0.05 + 3);
     g.globalAlpha = 1;
   }
+  /* 言葉の大きさ：指定が無効（画面の大きさが決まる前に決めてしまった場合など）なら、いまの画面の幅から決め直す */
+  wordSize() { const o = this.wordOpt && this.wordOpt.size; return o > 0 ? o : (this.W > 0 ? clamp(Math.round(this.W / 30), 18, 52) : 0); }
   wordSprite(w, size) {
     if (w.spr && w.sprSize === size) return w.spr;
     const ch = Array.from(w.text), maxRows = clamp(Math.floor(this.H * 0.46 / (size * 1.12)), 5, 12), cols = Math.ceil(ch.length / maxRows), rows = Math.ceil(ch.length / cols);
@@ -1570,7 +1572,7 @@ class Forest {
   drawWords() {
     const g = this.g, W = this.W, H = this.H, list = this.words, N = list.length;
     const M = this.wordOpt.max, life = 12, L = Math.max(life, N * life / M);
-    const size = this.wordOpt.size;
+    const size = this.wordSize();
     if (!(size > 0) || !(W > 0) || !(H > 0)) return; /* 大きさが決まる前は描かない */
     for (let i = 0; i < N; i++) {
       const w = list[i];
@@ -2396,7 +2398,7 @@ Screens.proj = {
       renderHist($('#projBrushHist'), s.votes && s.votes.brush); renderHist($('#projMistHist'), s.votes && s.votes.mist);
     });
   },
-  fit() { if (projForest) projForest.wordOpt = { size: clamp(Math.round(projForest.W / 30), 20, 52), max: 12 }; },
+  fit() { if (projForest && projForest.W > 0) projForest.wordOpt = { size: clamp(Math.round(projForest.W / 30), 20, 52), max: 12 }; else if (projForest) projForest.wordOpt = { size: 0, max: 12 }; },
   leave() { Sound.set(false); projForest && projForest.stop(); projUnsub && projUnsub(); projUnsub = null; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); },
   resize() { projForest && projForest.resize(); this.fit(); },
 };
