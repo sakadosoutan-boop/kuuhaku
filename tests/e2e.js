@@ -115,6 +115,10 @@ async function localFlow(browser, base, vp, name) {
     assert.match(await page.textContent('#s-lab .credit'), /深川洲崎十万坪/);
     await page.shot('04b-lab-half');
     const sum = await page.textContent('#labSum'); for (const re of [/三角形：見えた/, /幹が続いている/, /3段階目/, /コップが落ちた/, /上半分：「青い空と雲」/]) assert.match(sum, re);
+    /* 補完ラボの結果をクラスで共有する：答えたあとに、みんなの答え・予想が出る（端末内モードでは自分の分だけ） */
+    const sh = await page.evaluate(() => ({ kz: !document.querySelector('#kzShare').hidden && document.querySelector('#kzShare').textContent, hide: document.querySelector('#hideShare').textContent, manga: document.querySelector('#mangaShare').textContent, half: document.querySelector('#halfShare').textContent, kzMine: document.querySelector('#kzShare .kzrow.mine span')?.textContent }));
+    assert.match(sh.kz, /みんなの答え（1人）/); assert.match(sh.kzMine, /見えた/); assert.match(sh.hide, /幹が続いている/); assert.match(sh.manga, /コップが落ちた/); assert.match(sh.half, /青い空と雲/);
+    assert.ok(await page.locator('#halfShare .chips2 li.mine').count() === 1, '自分の予想に印が付いていない');
     await page.shot('04-lab-manga');
     await page.click('#labNext'); await page.waitForURL(/#\/brush/);
   });
@@ -127,6 +131,13 @@ async function localFlow(browser, base, vp, name) {
     assert.match(await page.textContent('#brushMine'), /92/);
     assert.ok(await page.locator('#toast.on').count() === 1, '記録のお知らせ（toast）が出ない');
     assert.strictEqual(await page.locator('#brushHist .bar.mine b').textContent(), '1');
+    /* 分布の読み方：目盛り・自分の位置・いまの位置・いちばん多い所 */
+    assert.deepStrictEqual(await page.$$eval('#brushAxis .ticks2 span', e => e.map(x => x.textContent)), ['0', '20', '40', '60', '80', '100']);
+    const stat = await page.textContent('#brushStat'); assert.match(stat, /1人が記録/); assert.match(stat, /いちばん多いのは 90〜100/);   /* 最後の区切りは 100 を含む */ assert.match(stat, /あなたは 92（荒い筆寄り）/);
+    assert.match(await page.textContent('#brushAxis'), /精緻（北宋画）/);
+    assert.strictEqual(await page.$eval('#brushHist .curline', e => e.style.left), '92%'); await setRange(page, '#brushRange', 20);
+    assert.strictEqual(await page.$eval('#brushHist .curline', e => e.style.left), '20%'); assert.match(await page.textContent('#brushHist .curline em'), /いま 20/);
+    await setRange(page, '#brushRange', 92);
     await page.shot('06-brush-92');
   });
 
@@ -160,6 +171,7 @@ async function localFlow(browser, base, vp, name) {
     assert.ok(await page.isVisible('#overBadge')); await page.shot('08-forest-00');
     await setRange(page, '#mistRange', 64); await page.click('#mistRec'); await page.waitForTimeout(300);
     assert.match(await page.textContent('#mistMine'), /64/);
+    assert.match(await page.textContent('#mistStat'), /あなたは 64（中くらい）/); assert.strictEqual(await page.$eval('#mistHist .curline', e => e.style.left), '64%');
     const snd = await page.evaluate(async () => { Sound.set(true); setMist(100); await new Promise(r => setTimeout(r, 1500)); const lo = Sound.lp.frequency.value; setMist(0); await new Promise(r => setTimeout(r, 1500)); const hi = Sound.lp.frequency.value; forest.vel = 1; Sound.nextGust = 0; Sound.move(1); Sound.set(false); return { on: !!Sound.ctx, lo, hi }; });
     assert.ok(snd.on, '音が作れない'); assert.ok(snd.hi > snd.lo + 1000, `霧で音がこもらない ${snd.lo} ${snd.hi}`);
     await setRange(page, '#mistRange', 64);
@@ -274,13 +286,21 @@ async function localFlow(browser, base, vp, name) {
     assert.match(await page.textContent('#projInfo'), /1の言葉/);
     await page.waitForFunction(() => projForest.words && projForest.words.some(w => w.spr), null, { timeout: 15000 }).catch(() => { throw new Error('投影モードで言葉が描かれていない（大きさ=' + 'NaN/0 の可能性）'); });
     assert.ok(await page.evaluate(() => projForest.wordSize() >= 18), '言葉の大きさが決まっていない');
-    await page.click('#projHistBtn'); await page.waitForTimeout(200); await page.shot('11-proj');
+    /* 投影：補完ラボの結果 */
+    await page.click('#projLabBtn'); await page.waitForSelector('#projLabBox:not([hidden])'); assert.match(await page.textContent('#projLabBody'), /白い三角形は、見えましたか？（1人）/);
+    await page.click('#projLabTabs [data-t=hide]'); assert.match(await page.textContent('#projLabBody'), /幹が続いている/);
+    await page.click('#projLabTabs [data-t=half]'); assert.match(await page.textContent('#projLabBody'), /青い空と雲/); await page.shot('11b-proj-lab');
+    await page.click('#projHistBtn'); await page.waitForTimeout(200); assert.ok(await page.isHidden('#projLabBox'), '分布を開いたら補完ラボは閉じる'); await page.shot('11-proj');
     assert.ok(await page.locator('#projBrushHist .bar i').nth(9).evaluate(e => e.getBoundingClientRect().height > 20), '投影の分布が見えない');
   });
 
   await step('教員用（端末内）：非表示', async () => {
     await open(page, base, 'teacher'); await page.waitForTimeout(400);
     assert.match(await page.textContent('#tPosts'), /霧の向こうに/);
+    assert.ok(await page.locator('#tAnswers li').count() >= 3, '予想の一覧が出ていない'); assert.match(await page.textContent('#tAnswers'), /上半分/);
+    await page.click('#tAnswers li:has-text("幹が続いている") button[data-op=hide]'); await page.waitForTimeout(300);
+    assert.strictEqual((await page.evaluate(() => Share.state())).answers.hide.length, 0, '非表示にした予想が共有に残っている');
+    await page.click('#tAnswers li.hid button[data-op=unhide]'); await page.waitForTimeout(300); assert.strictEqual((await page.evaluate(() => Share.state())).answers.hide.length, 1);
     await page.click('#tPosts button[data-op=hide]'); await page.waitForTimeout(300);
     assert.ok(await page.locator('#tPosts li.hid').count() === 1);
     const st = await page.evaluate(() => Share.state()); assert.strictEqual(st.posts.length, 0);
@@ -511,7 +531,7 @@ async function embedFlow(browser, base) {
     assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(4) button', 'data-link'), SELF + '?class=2A&scene=forest');
     assert.strictEqual(await page.getAttribute('#tLinks li:nth-child(1) button', 'data-link'), SELF + '?class=2A&scene=check/pre');
     await page.fill('#tClasses', '2B'); await page.dispatchEvent('#tClasses', 'change'); assert.strictEqual(await page.getAttribute('#tClassLinks summary button', 'data-link'), SELF + '?class=2B');
-    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent("#tGasMsg"), /版 1\.3\.1/);
+    await page.click('#tPing'); await page.waitForFunction(() => /つながりました/.test(document.querySelector('#tGasMsg').textContent)); assert.match(await page.textContent("#tGasMsg"), /版 1\.4\.0/);
   });
   await step('配信ページ：教員の操作（非表示・全消去）。確認はページ内のダイアログ', async () => {
     assert.match(await page.textContent('#tPosts'), /霧の向こうの港/);
@@ -577,6 +597,40 @@ async function embedFlow(browser, base) {
     /* シートにはメールアドレスが残らない */
     assert.ok(!JSON.stringify(g4.sheets.get('progress').data).includes('saitama.example'));
     for (const d of [d1, d2]) { assert.deepStrictEqual(d.pg.errs, []); await d.c.close(); }
+  });
+
+  await step('補完ラボの共有：友だちの予想が見え、自分の予想が届き、先生が非表示にでき、古い GAS でも止まらない', async () => {
+    const g6 = createGas({ pin: '2468' });
+    g6.post({ action: 'answer', 'class': '2A', client: 'friendclient01', topic: 'half', text: '空と雲' }); g6.post({ action: 'answer', 'class': '2A', client: 'friendclient02', topic: 'half', text: '大きな月' });
+    g6.post({ action: 'vote', 'class': '2A', client: 'friendclient01', kind: 'kz', value: 90 }); g6.post({ action: 'vote', 'class': '2A', client: 'friendclient02', kind: 'kz', value: 10 });
+    let oldGas = false;
+    const c6 = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, locale: 'ja-JP' });
+    const p6 = await c6.newPage(); const errs6 = []; p6.on('pageerror', e => errs6.push(e.message)); p6.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) errs6.push(m.text()); });
+    await p6.exposeFunction('__gasApi', json => { g6.advance(3); if (oldGas && /"action":"(answer)"/.test(json)) return JSON.stringify({ ok: false, error: 'unknown' }); return g6.api(json); });
+    await p6.addInitScript(({ origin, SELF }) => { window.KUUHAKU_EMBEDDED = true; window.KUUHAKU_BASE = origin; window.KUUHAKU_SELF = SELF; window.KUUHAKU_PARAMS = { 'class': '2A', scene: 'lab' }; const mk = (ok, ng) => ({ withSuccessHandler: f => mk(f, ng), withFailureHandler: f => mk(ok, f), api: json => { window.__gasApi(json).then(r => ok && ok(r), e => ng && ng(e)); } }); window.google = { script: { run: mk(null, null) } }; }, { origin, SELF });
+    await p6.goto(base.split('#')[0]); await p6.waitForSelector('#s-lab.on');
+    assert.ok(await p6.isHidden('#kzShare'), '答える前に、みんなの答えが見えている（先に見ると写してしまう）');
+    await p6.click('#kzAns [data-kz="見えた"]'); await p6.waitForFunction(() => /みんなの答え（3人）/.test(document.querySelector('#kzShare').textContent), null, { timeout: 10000 });
+    assert.strictEqual(g6.get({ action: 'state', 'class': '2A' }).votes.kz[9], 2, 'kz の投票が届いていない（友だち1＋自分1）');
+    await p6.click('#labDots [data-i="4"]'); await p6.waitForFunction(() => document.querySelector('#halfImg').naturalWidth > 0);
+    assert.ok(await p6.isHidden('#halfShare'), 'めくる前に、友だちの予想が見えている');
+    await p6.fill('#halfGuess', '青い空'); await p6.click('#halfBtn'); await p6.waitForFunction(() => /みんなの上半分の予想（3人）/.test(document.querySelector('#halfShare').textContent), null, { timeout: 10000 });
+    const chips = await p6.$$eval('#halfShare .chips2 li', l => l.map(x => x.textContent)); assert.deepStrictEqual(chips.sort(), ['大きな月', '空と雲', '青い空'].sort());
+    assert.ok(g6.get({ action: 'state', 'class': '2A' }).answers.half.some(a => a.text === '青い空'), '自分の予想が届いていない');
+    /* 書き直すと上書き（1人1つ） */
+    await p6.fill('#halfGuess', '青い空と鳥'); await p6.dispatchEvent('#halfGuess', 'change'); await p6.waitForFunction(() => /青い空と鳥/.test(document.querySelector('#halfShare').textContent), null, { timeout: 10000 });
+    assert.strictEqual(g6.get({ action: 'state', 'class': '2A' }).answers.half.length, 3, '書き直しで増えた');
+    /* 先生が非表示にすると、生徒の画面から消える */
+    const ids = g6.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'list' }).answers; const bad = ids.find(a => a.text === '大きな月');
+    g6.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'hide', id: bad.id });
+    await p6.waitForFunction(() => !/大きな月/.test(document.querySelector('#halfShare').textContent), null, { timeout: 20000 });
+    /* 古い GAS（answer を知らない）：予想は端末に残り、お知らせが出て、ほかの機能は止まらない */
+    oldGas = true; await p6.click('#labDots [data-i="1"]'); await p6.fill('#hideGuess', '幹が続く'); await p6.click('#hideBtn');
+    await p6.waitForFunction(() => /古い版/.test(document.querySelector('#toast').textContent), null, { timeout: 10000 });
+    assert.match(await p6.textContent('#hideShare'), /幹が続く/, '古い GAS でも、自分の予想は画面に残る');
+    await open(p6, base, 'brush'); await p6.$eval('#brushRange', e => { e.value = 66; e.dispatchEvent(new Event('input')); }); await p6.click('#brushVote'); await p6.waitForTimeout(600);
+    assert.strictEqual(g6.get({ action: 'state', 'class': '2A' }).votes.brush[6], 1, '古い GAS でも、描き込みの投票は届く');
+    assert.deepStrictEqual(errs6, []); await c6.close();
   });
 
   await step('クラスコードなしのリンクで開いた生徒は、ホームでクラスを入れるとそのクラスに入れる', async () => {

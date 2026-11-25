@@ -61,7 +61,7 @@ t('setup が動く', () => { g.sandbox.setup(); assert.ok(g.sheets.has('classes'
 /* ---- 学校のドメイン内だけに公開する場合：GAS が教材の画面を配信する ---- */
 const fs = require('fs'), path = require('path');
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'gas', 'Code.gs'), 'utf8');
-t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.3.1'));
+t('ping に版が出る', () => assert.strictEqual(g.get({ action: 'ping' }).version, '1.4.0'));
 t('外部への通信の権限を求めない（UrlFetchApp を使わない。学校の管理設定で setup が止まらないように）', () => {
   assert.ok(!/UrlFetchApp/.test(SRC), 'UrlFetchApp が残っている（外部通信の権限を求めてしまう）');
   for (const svc of ['GmailApp', 'DriveApp', 'MailApp', 'CalendarApp', 'DocumentApp', 'openById', 'openByUrl']) assert.ok(!SRC.includes(svc), svc + ' を使っている（余計な権限を求める）');
@@ -93,14 +93,14 @@ t('URL のパラメータに <script> を混ぜても、画面に注入されな
 });
 t('api()：google.script.run の入口が、これまでの API と同じ結果を返す', () => {
   const g2 = createGas({ pin: '2468' });
-  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.3.1');
+  assert.strictEqual(JSON.parse(g2.api('{"action":"ping"}')).version, '1.4.0');
   assert.strictEqual(JSON.parse(g2.api('{bad')).error, 'badjson');
   const r = JSON.parse(g2.api(JSON.stringify({ action: 'post', 'class': '2A', client: 'apiclient001', text: '霧の奥', x: .4, y: .5 }))); assert.ok(r.ok);
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'state', 'class': '2A' }))).posts[0].text, '霧の奥');
   assert.strictEqual(JSON.parse(g2.api(JSON.stringify({ action: 'admin', 'class': '2A', pin: 'x', op: 'list' }))).error, 'pin');
 });
 t('action 付きの GET は、これまでどおり JSON（公開範囲が「全員」の方式）', () => { const r = g.get({ action: 'ping' }); assert.ok(r.ok); });
-t('setup と check：紐づいたスプレッドシートで動き、版を返す', () => { const g2 = createGas({ pin: '1' }); assert.strictEqual(g2.sandbox.setup(), 'OK 1.3.1'); assert.strictEqual(g2.sandbox.check(), 'OK'); });
+t('setup と check：紐づいたスプレッドシートで動き、版を返す', () => { const g2 = createGas({ pin: '1' }); assert.strictEqual(g2.sandbox.setup(), 'OK 1.4.0'); assert.strictEqual(g2.sandbox.check(), 'OK'); });
 /* ---- 生徒の記録：学校のアカウントで見分けて、続きから再開できる ---- */
 t('記録：ログインしていなければ signed:false（保存もしない）', () => {
   const g2 = createGas({ pin: '1' });
@@ -156,5 +156,77 @@ t('記録：古い版をもとにした保存は断る（ほかの端末の新�
 });
 t('記録：公開範囲「全員」の fetch（doGet/doPost）からは、記録を読み書きできない', () => {
   assert.strictEqual(g.get({ action: 'me' }).error, 'embedonly'); assert.strictEqual(g.post({ action: 'save', data: {} }).error, 'embedonly');
+});
+/* ---- 補完ラボの結果を、クラスで共有する（三角形の投票・予想） ---- */
+t('三角形：kz の投票が、10・50・90 のどれかで集計される', () => {
+  const g2 = createGas({ pin: '1' });
+  for (const [c, v] of [['kzclient0001', 90], ['kzclient0002', 90], ['kzclient0003', 50], ['kzclient0004', 10]]) assert.ok(g2.post({ action: 'vote', 'class': '2A', client: c, kind: 'kz', value: v }).ok);
+  const r = g2.get({ action: 'state', 'class': '2A' }); assert.strictEqual(r.votes.kz[9], 2); assert.strictEqual(r.votes.kz[5], 1); assert.strictEqual(r.votes.kz[1], 1); assert.strictEqual(r.n.kz, 4);
+});
+t('予想：投稿でき、state に お題ごとに出る', () => {
+  const g2 = createGas({ pin: '1' });
+  const r = g2.post({ action: 'answer', 'class': '2A', client: 'ansclient001', topic: 'half', text: ' 青い空と 雲 ' }); assert.ok(r.ok, JSON.stringify(r)); assert.strictEqual(r.answer.text, '青い空と 雲'); assert.match(r.answer.id, /^A/);
+  g2.post({ action: 'answer', 'class': '2A', client: 'ansclient002', topic: 'hide', text: '幹が続いている' });
+  const s = g2.get({ action: 'state', 'class': '2A' }); assert.deepStrictEqual(s.answers.half.map(a => a.text), ['青い空と 雲']); assert.deepStrictEqual(s.answers.hide.map(a => a.text), ['幹が続いている']); assert.deepStrictEqual(s.answers.manga, []);
+});
+t('予想：同じ人・同じお題は上書き（1人1つ）。別のお題・別の人は別', () => {
+  const g2 = createGas({ pin: '1' }), C = 'ansclient001';
+  g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'manga', text: '落ちた' }); g2.advance(3);
+  const r = g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'manga', text: 'ガシャーン' }); assert.ok(r.ok);
+  g2.post({ action: 'answer', 'class': '2A', client: 'ansclient002', topic: 'manga', text: 'コップが割れた' });
+  const s = g2.get({ action: 'state', 'class': '2A' }); assert.deepStrictEqual(s.answers.manga.map(a => a.text).sort(), ['ガシャーン', 'コップが割れた']);
+  assert.strictEqual(g2.sheets.get('answers').data.length, 3, '見出し＋2人分');
+});
+t('予想：30字・NG語・個人情報・お題の検査、連打の制限、受付停止', () => {
+  const g2 = createGas({ pin: '2468' }), C = 'ansclient001';
+  assert.strictEqual(g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'half', text: 'あ'.repeat(31) }).error, 'length');
+  assert.strictEqual(g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'half', text: 'バーカ' }).error, 'ng');
+  assert.strictEqual(g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'half', text: 'a@b.jp' }).error, 'personal');
+  assert.strictEqual(g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'xxx', text: '雲' }).error, 'topic');
+  assert.ok(g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'half', text: '雲' }).ok);
+  assert.strictEqual(g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'half', text: '空' }).error, 'rate');
+  g2.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'close' }); g2.advance(5);
+  assert.strictEqual(g2.post({ action: 'answer', 'class': '2A', client: 'ansclient009', topic: 'half', text: '雲' }).error, 'closed');
+});
+t('予想：先生が非表示にでき、書き直しても再表示されない。全消去で消える。他のクラスには影響しない', () => {
+  const g2 = createGas({ pin: '2468' }), C = 'ansclient001';
+  g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'half', text: '雲' }); g2.post({ action: 'answer', 'class': '2B', client: C, topic: 'half', text: '山' });
+  const l = g2.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'list' }); assert.strictEqual(l.answers.length, 1); assert.strictEqual(l.answers[0].topic, 'half'); const id = l.answers[0].id;
+  g2.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'hide', id }); assert.deepStrictEqual(g2.get({ action: 'state', 'class': '2A' }).answers.half, []);
+  g2.advance(5); g2.post({ action: 'answer', 'class': '2A', client: C, topic: 'half', text: '空' }); assert.deepStrictEqual(g2.get({ action: 'state', 'class': '2A' }).answers.half, [], '書き直しで再表示された');
+  g2.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'unhide', id }); assert.deepStrictEqual(g2.get({ action: 'state', 'class': '2A' }).answers.half.map(a => a.text), ['空']);
+  g2.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'clear' }); assert.deepStrictEqual(g2.get({ action: 'state', 'class': '2A' }).answers.half, []);
+  assert.deepStrictEqual(g2.get({ action: 'state', 'class': '2B' }).answers.half.map(a => a.text), ['山']);
+});
+t('予想：シートに数式として解釈される文字列を、そのまま文字として保存する', () => {
+  const g2 = createGas({ pin: '1' }); g2.post({ action: 'answer', 'class': '2A', client: 'ansclient001', topic: 'half', text: '=1+1' });
+  assert.strictEqual(g2.get({ action: 'state', 'class': '2A' }).answers.half[0].text, '=1+1');
+});
+/* ---- 今あるデータを壊さない（版 1.3.1 までの形式の行を先に入れて、新機能を通す） ---- */
+t('互換：旧形式の posts・votes・classes・progress は、中身も集計も変わらない', () => {
+  const g2 = createGas({ pin: '2468' }), S = g2.sandbox;
+  S.sheet_('posts').appendRow(['P1', '2A', '霧の向こうの港', 0.3, 0.4, 'oldclient0001', 1700000000000, false]);
+  S.sheet_('posts').appendRow(['P2', '2A', '隠された言葉', 0.5, 0.5, 'oldclient0002', 1700000001000, true]);
+  S.sheet_('votes').appendRow(['2A', 'oldclient0001', 'brush', 77, 1700000000000]); S.sheet_('votes').appendRow(['2A', 'oldclient0002', 'mist', 33, 1700000000000]); S.sheet_('votes').appendRow(['2A', 'oldclient0001', 'blur', 50, 1700000000000]);
+  S.sheet_('classes').appendRow(['2A', true, 1700000000000]);
+  S.sheet_('progress').appendRow(['Uoldkey000000000000000000000000000', '2A', JSON.stringify({ brushVote: 77, lab: { kz: '見えた' } }), 1700000000000]);
+  const snap = () => JSON.stringify(['posts', 'votes', 'classes', 'progress'].map(n => g2.sheets.get(n).data));
+  const before = snap();
+  const s = g2.get({ action: 'state', 'class': '2A' });                                   // answers シートが無い状態でも動く
+  assert.deepStrictEqual(s.posts.map(p => p.text), ['霧の向こうの港']); assert.strictEqual(s.votes.brush[7], 1); assert.strictEqual(s.votes.mist[3], 1); assert.strictEqual(s.votes.blur[5], 1);
+  assert.deepStrictEqual(s.answers, { hide: [], manga: [], half: [] }); assert.strictEqual(s.votes.kz.reduce((a, b) => a + b, 0), 0);
+  assert.strictEqual(snap(), before, 'state で既存のシートが変わった');
+  assert.ok(g2.sheets.has('answers'), '新しいシート answers が作られていない');
+  g2.post({ action: 'answer', 'class': '2A', client: 'newclient0001', topic: 'half', text: '雲' }); g2.post({ action: 'vote', 'class': '2A', client: 'newclient0001', kind: 'kz', value: 90 });
+  const after = JSON.parse(snap()), was = JSON.parse(before);
+  assert.deepStrictEqual(after[0], was[0], 'posts が変わった'); assert.deepStrictEqual(after[2], was[2], 'classes が変わった'); assert.deepStrictEqual(after[3], was[3], 'progress が変わった');
+  assert.deepStrictEqual(after[1].slice(0, was[1].length), was[1], 'votes の既存の行が変わった');     // 新しい行（kz）が足されるだけ
+  const me = JSON.parse(g2.apiAs('someone@saitama.example', '{"action":"me"}')); assert.ok(me.signed);
+  const adm = g2.post({ action: 'admin', 'class': '2A', pin: '2468', op: 'list' }); assert.strictEqual(adm.posts.length, 2); assert.strictEqual(adm.answers.length, 1);
+});
+t('互換：以前の教材（answers を知らない）が受け取る state は、これまでの項目をすべて含む', () => {
+  const g2 = createGas({ pin: '1' }); g2.post({ action: 'post', 'class': '2A', client: 'oldclient0001', text: '言葉', x: .5, y: .5 });
+  const s = g2.get({ action: 'state', 'class': '2A' });
+  for (const k of ['ok', 'class', 'open', 'posts', 'votes', 'n', 'time']) assert.ok(k in s, k + ' が無い'); for (const k of ['brush', 'mist', 'blur']) assert.strictEqual(s.votes[k].length, 10);
 });
 console.log(`GAS API: ${n} 件すべて成功`);

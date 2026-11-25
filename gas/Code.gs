@@ -23,7 +23,7 @@
  *   HTML ファイル「Index」として貼り付ければ、そちらを使う。
  */
 var APP_URL = 'https://sakadosoutan-boop.github.io/kuuhaku/';
-var VERSION = '1.3.1';
+var VERSION = '1.4.0';
 var CFG = {
   MAX_LEN: 30,               // 投稿の最大文字数
   POST_INTERVAL_SEC: 15,     // 同じ端末の連投間隔
@@ -38,9 +38,12 @@ var HEADERS = {
   posts: ['id', 'class', 'text', 'x', 'y', 'client', 'time', 'hidden'],
   votes: ['class', 'client', 'kind', 'value', 'time'],
   classes: ['class', 'open', 'updated'],
+  answers: ['id', 'class', 'topic', 'text', 'client', 'time', 'hidden'],   // 補完ラボの予想（隠した絵・2コマ・上半分）
   progress: ['key', 'class', 'data', 'updated'],
 };
-var KINDS = ['brush', 'mist', 'blur'];  // 描き込み・靄・ぼかし絵（何段階目でわかったか）
+var KINDS = ['brush', 'mist', 'blur', 'kz'];  // kz＝見えない三角形（10＝見えなかった／50＝少し見えた／90＝見えた）
+var TOPICS = ['hide', 'manga', 'half'];       // 補完ラボで共有する予想のお題
+var ANSWERS_RETURN = 80;                       // state で返す、お題ごとの予想の数  // 描き込み・靄・ぼかし絵（何段階目でわかったか）
 var NG = ['しね', '死ね', 'ころす', '殺す', 'ころせ', '殺せ', 'きもい', 'きしょい', 'うざい', 'うぜ', 'ばか(?!り|す)', '馬鹿', 'あほ(?!う)', '阿呆', 'ぶす(?!い)', 'くず(?!れ|す|も)', 'きえろ', '消えろ', '死んで', 'ちんこ', 'まんこ', 'うんこ', 'ちんちん', 'おっぱい', 'せっくす', 'sex', 'fuck', 'shit', 'でぶ', 'はげ(?!し|む|ま)'];
 
 /* ---------------- 入口 ---------------- */
@@ -111,6 +114,7 @@ function handle_(p, viaApi) {
       case 'state': return state_(p);
       case 'post': return post_(p);
       case 'vote': return vote_(p);
+      case 'answer': return answer_(p);
       case 'admin': return admin_(p);
       default: return { ok: false, error: 'unknown' };
     }
@@ -205,7 +209,12 @@ function state_(p) {
     .sort(function (a, b) { return a.t - b.t; })
     .slice(-CFG.MAX_POSTS_RETURN);
   var v = bins_(rows_('votes'), c);
-  var res = { ok: true, 'class': c, open: isOpen_(c), posts: posts, votes: v.votes, n: v.n, time: Date.now() };
+  var answers = {}; TOPICS.forEach(function (tp) { answers[tp] = []; });
+  rows_('answers').filter(function (r) { return String(r[1]) === c && !hidden_(r[6]) && answers[String(r[2])]; })
+    .sort(function (a, b) { return timeOf_(a[5]) - timeOf_(b[5]); })
+    .forEach(function (r) { answers[String(r[2])].push({ id: String(r[0]), text: String(r[3]), t: timeOf_(r[5]) }); });
+  TOPICS.forEach(function (tp) { answers[tp] = answers[tp].slice(-ANSWERS_RETURN); });
+  var res = { ok: true, 'class': c, open: isOpen_(c), posts: posts, answers: answers, votes: v.votes, n: v.n, time: Date.now() };
   cache_().put(key, JSON.stringify(res), CFG.STATE_CACHE_SEC);
   return res;
 }
@@ -223,6 +232,25 @@ function post_(p) {
     cache_().put(rl, '1', CFG.POST_INTERVAL_SEC);
     cache_().remove('st:' + c);
     return { ok: true, post: { id: id, text: text, x: x, y: y, t: now } };
+  });
+}
+
+function answer_(p) {
+  var c = cls_(p), cl = client_(p), topic = String(p.topic || '');
+  if (TOPICS.indexOf(topic) < 0) fail_('topic');
+  var text = checkText_(p.text);
+  var rl = 'ra:' + c + ':' + cl + ':' + topic;
+  if (cache_().get(rl)) fail_('rate');
+  return withLock_(function () {
+    if (!isOpen_(c)) fail_('closed');
+    var sh = sheet_('answers'), rows = rows_('answers'), now = Date.now(), found = -1;
+    for (var i = 0; i < rows.length; i++) if (String(rows[i][1]) === c && String(rows[i][4]) === cl && String(rows[i][2]) === topic) { found = i; break; }
+    var id;
+    if (found >= 0) { id = String(rows[found][0]); sh.getRange(found + 2, 4, 1, 1).setValue(safeCell_(text)); sh.getRange(found + 2, 6, 1, 1).setValue(now); }   // 非表示の印（7列目）はそのまま
+    else { id = 'A' + now.toString(36) + Utilities.getUuid().slice(0, 4); sh.appendRow([id, c, topic, safeCell_(text), cl, now, false]); }
+    cache_().put(rl, '1', 2);
+    cache_().remove('st:' + c);
+    return { ok: true, answer: { id: id, topic: topic, text: text, t: now } };
   });
 }
 
@@ -258,10 +286,17 @@ function admin_(p) {
       case 'list': break;
       case 'hide': case 'unhide': {
         var sh = sheet_('posts'), rows = rows_('posts');
-        for (var i = 0; i < rows.length; i++) if (String(rows[i][0]) === String(p.id) && String(rows[i][1]) === c) { sh.getRange(i + 2, 8).setValue(op === 'hide'); break; }
+        var done = false;
+        for (var i = 0; i < rows.length; i++) if (String(rows[i][0]) === String(p.id) && String(rows[i][1]) === c) { sh.getRange(i + 2, 8).setValue(op === 'hide'); done = true; break; }
+        if (!done) {   // 予想（補完ラボ）の側
+          var sa = sheet_('answers'), ar = rows_('answers');
+          for (var j = 0; j < ar.length; j++) if (String(ar[j][0]) === String(p.id) && String(ar[j][1]) === c) { sa.getRange(j + 2, 7).setValue(op === 'hide'); break; }
+        }
         break;
       }
-      case 'clear': rewrite_('posts', rows_('posts').filter(function (r) { return String(r[1]) !== c; })); break;
+      case 'clear':
+        rewrite_('posts', rows_('posts').filter(function (r) { return String(r[1]) !== c; }));
+        rewrite_('answers', rows_('answers').filter(function (r) { return String(r[1]) !== c; })); break;
       case 'clearVotes': rewrite_('votes', rows_('votes').filter(function (r) { return String(r[0]) !== c; })); break;
       case 'open': setOpen_(c, true); break;
       case 'close': setOpen_(c, false); break;
@@ -271,8 +306,11 @@ function admin_(p) {
     var posts = rows_('posts').filter(function (r) { return String(r[1]) === c; })
       .map(function (r) { return { id: String(r[0]), text: String(r[2]), t: timeOf_(r[6]), hidden: hidden_(r[7]) }; })
       .sort(function (a, b) { return a.t - b.t; });
+    var ans = rows_('answers').filter(function (r) { return String(r[1]) === c; })
+      .map(function (r) { return { id: String(r[0]), topic: String(r[2]), text: String(r[3]), t: timeOf_(r[5]), hidden: hidden_(r[6]) }; })
+      .sort(function (a, b) { return a.t - b.t; });
     var v = bins_(rows_('votes'), c);
-    return { ok: true, op: op, 'class': c, open: isOpen_(c), posts: posts, votes: v.votes, n: v.n };
+    return { ok: true, op: op, 'class': c, open: isOpen_(c), posts: posts, answers: ans, votes: v.votes, n: v.n };
   });
 }
 

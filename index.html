@@ -418,6 +418,35 @@ details.about summary{cursor:pointer;color:var(--sumi);font-size:.88rem;min-heig
 #tClassLinks details[open] summary::after{content:"とじる ▴"}
 #tClassLinks .links{margin:0 0 8px 12px}
 .classprompt{border:2px solid var(--ink)!important}
+.histstat{margin:.2rem 0 .5rem;font-size:.86rem;line-height:1.7;color:var(--sumi)}
+.histstat b{color:var(--ink)}
+.histstat .dot{color:var(--usuzumi)}
+.hist{position:relative}
+.curline{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed #7a2b22;pointer-events:none;z-index:2}
+.curline em{position:absolute;top:-4px;left:0;font-style:normal;font-size:.7rem;background:#7a2b22;color:#fff;padding:0 7px;border-radius:999px;white-space:nowrap;line-height:1.5}
+.histaxis .ticks2{position:relative;height:1.25em;margin-top:3px;font-size:.72rem;color:var(--sumi);font-variant-numeric:tabular-nums}
+.histaxis .ticks2 span{position:absolute;top:0}
+.histaxis .hist-labels{margin-top:2px}
+.hist.big{height:200px}
+.projhist .histstat{font-size:1.05rem}
+.projhist .histaxis .ticks2{font-size:.95rem}
+.classres{margin:12px 0;background:rgba(255,254,251,.9);border-radius:var(--r);box-shadow:var(--shadow);padding:10px 14px 12px}
+.classres h3{margin:0 0 6px;font-size:.95rem}
+.chips2{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.chips2 li{padding:3px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:.92rem;line-height:1.6}
+.chips2 li.mine{border-color:var(--ink);background:var(--ink);color:#fff}
+.kzrow{display:grid;grid-template-columns:6.5em 1fr 3em;gap:8px;align-items:center;margin:4px 0;font-size:.9rem}
+.kzrow i{display:block;height:16px;border-radius:4px;background:linear-gradient(90deg,#3a3a3a,#6f6f6f);min-width:2px}
+.kzrow.mine i{background:var(--ink);box-shadow:0 0 0 2px #fff,0 0 0 3.5px #7a2b22}
+.kzrow.mine span::after{content:" ●";color:#7a2b22}
+.kzrow b{text-align:right;font-variant-numeric:tabular-nums}
+.projlab{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:5;width:min(960px,calc(100vw - 32px));max-height:64vh;overflow:auto;background:rgba(255,254,251,.94);border:1px solid var(--line);border-radius:14px;padding:10px 18px 14px}
+.projlab[hidden]{display:none}
+.projlab .chips2 li{font-size:1.5rem;padding:6px 18px}
+.projlab .kzrow{font-size:1.3rem;grid-template-columns:8em 1fr 4em}
+.projlab .kzrow i{height:28px}
+.projlab .hempty{font-size:1.1rem;text-align:center;margin:1rem 0}
+body.hideui .projlab{display:none!important}
 /* ---- 全画面 ---- */
 .hud{max-width:min(72%,460px)}
 .xp .badge{top:auto;bottom:34px;left:10px}
@@ -544,6 +573,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <div class="row choice" id="kzAns"><button class="btn" data-kz="見えた">見えた</button><button class="btn" data-kz="見えなかった">見えなかった</button><button class="btn" data-kz="少し見えた">少し見えた</button></div>
     <div class="row"><button class="btn" id="kzLine" aria-pressed="false">線で確かめる</button></div>
     <p class="note" id="kzNote"></p>
+    <div class="classres" id="kzShare" hidden></div>
   </div>
 
   <div class="labstep" data-step="1">
@@ -552,6 +582,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <div class="guess"><label for="hideGuess" class="sr">隠れている部分の予想</label><input id="hideGuess" maxlength="30" autocomplete="off" placeholder="隠れているのは……（予想を一言）"></div>
     <div class="row"><button class="btn" id="hideBtn" aria-pressed="false">霧を晴らす</button></div>
     <p class="note" id="hideNote"></p>
+    <div class="classres" id="hideShare" hidden></div>
   </div>
 
   <div class="labstep" data-step="2">
@@ -569,6 +600,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <p><b>左のコマと右のコマのあいだで、何が起きた？</b> 真ん中は描かれていません。想像を書いてからタップ。</p>
     <div class="guess"><label for="mangaGuess" class="sr">あいだのコマの予想</label><input id="mangaGuess" maxlength="30" autocomplete="off" placeholder="あいだで起きたのは……"></div>
     <p class="note" id="mangaNote"></p>
+    <div class="classres" id="mangaShare" hidden></div>
   </div>
 
   <div class="labstep" data-step="4">
@@ -577,6 +609,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
     <div class="guess"><label for="halfGuess" class="sr">隠れた上半分の予想</label><input id="halfGuess" maxlength="30" autocomplete="off" placeholder="上半分にあるのは……"></div>
     <div class="row"><button class="btn primary" id="halfBtn" aria-pressed="false">上半分をめくる</button></div>
     <p class="note" id="halfNote"></p>
+    <div class="classres" id="halfShare" hidden></div>
     <p class="credit">出典：<a href="https://colbase.nich.go.jp/collection_items/tnm/A-10569-7398" target="_blank" rel="noopener">ColBase（国立文化財機構所蔵品統合検索システム）「名所江戸百景・深川洲崎十万坪」</a>　歌川広重筆／江戸時代・安政4年（1857）／東京国立博物館蔵。画像を縮小し、上半分を隠す仕掛けを加えています（この教材による加工）。</p>
     <div class="card labsum" id="labSum" hidden></div>
   </div>
@@ -599,8 +632,9 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
       <button class="btn primary block" id="brushVote">この位置が いちばん松らしい</button>
       <p class="msg" id="brushMine"></p>
       <h3>クラスの分布</h3>
+      <p class="histstat" id="brushStat" hidden></p>
       <div class="hist" id="brushHist"></div>
-      <div class="hist-labels"><span>精緻</span><span>荒い</span></div>
+      <div class="histaxis" id="brushAxis"></div>
       <p class="share-note" data-share-note></p>
       <details class="think"><summary>考えよう</summary><p>針葉を一本ずつ描いた松と、数本の打ち込みだけの松。見る側の頭の中でしている仕事は、どう違うだろう。投票のあとで「<a href="#/real">実物を見る</a>」の②の松と比べてみよう。</p></details>
     </div>
@@ -636,8 +670,9 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
       <button class="btn primary block" id="mistRec">この濃さが いちばん広く深く感じる</button>
       <p class="msg" id="mistMine"></p>
       <h3>クラスの分布</h3>
+      <p class="histstat" id="mistStat" hidden></p>
       <div class="hist" id="mistHist"></div>
-      <div class="hist-labels"><span>0 すべて見える</span><span>100 白い霧</span></div>
+      <div class="histaxis" id="mistAxis"></div>
       <p class="share-note" data-share-note></p>
       <details class="think"><summary>考えよう</summary><p>靄 0 の「説明しすぎの絵」と、霧の濃い絵。広く深く感じるのはどちらか。本文 150・4「空白地帯を情報のゼロ地帯とは見なさない」とつなげて考えよう。左上の霊峰には、どこまで歩けば近づけるだろう。</p></details>
     </div>
@@ -710,17 +745,22 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
   <div class="projbar">
     <span class="info" id="projInfo"></span>
     <button class="chip" id="projHistBtn" aria-pressed="false">分布</button>
+    <button class="chip" id="projLabBtn" aria-pressed="false">補完ラボ</button>
     <button class="chip" id="projWalk" aria-pressed="true">歩く</button>
     <button class="chip" id="projSound" aria-pressed="false">松風</button>
     <button class="chip" id="projFull">全画面</button>
     <button class="chip" id="projHide" title="H キーでも切り替え。画面をタップすると戻ります">文字を隠す</button>
     <a class="chip" href="#/write">とじる</a>
   </div>
+  <div class="projlab" id="projLabBox" hidden>
+    <div class="row" id="projLabTabs" role="tablist" style="margin:0 0 6px"><button class="chip" data-t="kz" aria-pressed="true">見えない三角形</button><button class="chip" data-t="hide" aria-pressed="false">隠した絵</button><button class="chip" data-t="manga" aria-pressed="false">2コマ</button><button class="chip" data-t="half" aria-pressed="false">上半分</button></div>
+    <div id="projLabBody"></div>
+  </div>
   <div class="projhist" id="projHistBox" hidden>
     <h3>いちばん松らしい描き込み</h3>
-    <div class="hist big" id="projBrushHist"></div><div class="hist-labels"><span>精緻</span><span>荒い</span></div>
+    <p class="histstat" id="projBrushStat" hidden></p><div class="hist big" id="projBrushHist"></div><div class="histaxis" id="projBrushAxis"></div>
     <h3>いちばん広く深く感じた霧</h3>
-    <div class="hist big" id="projMistHist"></div><div class="hist-labels"><span>すべて見える</span><span>白い霧</span></div>
+    <p class="histstat" id="projMistStat" hidden></p><div class="hist big" id="projMistHist"></div><div class="histaxis" id="projMistAxis"></div>
   </div>
 </section>
 
@@ -792,6 +832,8 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
       <div class="row"><a class="btn primary" href="#/proj">投影モードへ</a><button class="btn" id="tReload">一覧を更新</button></div>
       <h3>投稿（<span id="tCount">0</span>件）</h3>
       <ul class="tposts" id="tPosts"></ul>
+      <h3>予想（補完ラボ）（<span id="tACount">0</span>件）</h3>
+      <ul class="tposts" id="tAnswers"></ul>
       <h3>リセット</h3>
       <div class="row"><button class="btn warn" id="tClear">投稿を全消去</button><button class="btn warn" id="tClearVotes">投票をリセット</button></div>
     </div>
@@ -1698,7 +1740,7 @@ function checkText(text) {
 const ERR = {
   ng: 'その言葉は使えません。別の言葉で書いてみよう。', personal: '電話番号・メールアドレス・URL は書けません。', length: '1〜30字で書いてください。',
   rate: `少し待ってから書いてね（${CONFIG.POST_INTERVAL_SEC}秒に1回）。`, limit: `書けるのは1人${CONFIG.MAX_POSTS}個までです。`, closed: 'いまは受付を停止しています。',
-  class: 'ホームでクラスコードを入れてください。', client: '端末の識別に失敗しました。', network: '共有先につながりません。少し待ってもう一度。',
+  topic: '予想のお題が正しくありません。', class: 'ホームでクラスコードを入れてください。', client: '端末の識別に失敗しました。', network: '共有先につながりません。少し待ってもう一度。',
   blocked: '共有先につながりません。先生に知らせてください。', timeout: '共有先の返事が遅れています。少し待ってもう一度。', offline: 'ネットワークにつながっていません。', http: '共有先がエラーを返しました。先生に知らせてください。', html: '共有先が正しく答えていません。先生に知らせてください。', pin: 'PIN がちがいます。',
   locked: 'PIN のまちがいが続いたため、10分間受け付けません。', nopin: 'GAS 側でスクリプト プロパティ TEACHER_PIN が設定されていません。', server: '共有先でエラーが起きました。先生に知らせてください。', unknown: '共有先が古い版かもしれません。',
 };
@@ -1738,7 +1780,7 @@ const Share = {
   label() { return this.mode === 'gas' ? `クラス ${this.cls || '（未設定）'} で共有中` : '端末内のみ（共有されません）'; },
   /* --- 端末内 --- */
   lkey() { return 'kuuhaku.local.' + (this.cls || 'LOCAL'); },
-  lload() { let o = null; try { o = JSON.parse(localStorage.getItem(this.lkey()) || 'null'); } catch (e) {} return Object.assign({ open: true, posts: [], votes: { brush: {}, mist: {}, blur: {} } }, o || {}); },
+  lload() { let o = null; try { o = JSON.parse(localStorage.getItem(this.lkey()) || 'null'); } catch (e) {} return Object.assign({ open: true, posts: [], answers: [], votes: { brush: {}, mist: {}, blur: {}, kz: {} } }, o || {}); },
   lsave(o) { try { localStorage.setItem(this.lkey(), JSON.stringify(o)); } catch (e) {} },
   bins(map) { const b = Array(10).fill(0); Object.values(map || {}).forEach(v => b[Math.min(9, Math.floor(v / 10))]++); return b; },
   /* --- 通信 --- */
@@ -1776,7 +1818,9 @@ const Share = {
   async state() {
     if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; return this.req({ action: 'state', class: this.cls }); }
     const o = this.lload();
-    return { ok: true, local: true, open: o.open, posts: o.posts.filter(p => !p.hidden), votes: { brush: this.bins(o.votes.brush), mist: this.bins(o.votes.mist), blur: this.bins(o.votes.blur) } };
+    const answers = { hide: [], manga: [], half: [] };
+    (o.answers || []).filter(a => !a.hidden && answers[a.topic]).sort((a, b) => a.t - b.t).forEach(a => answers[a.topic].push({ id: a.id, text: a.text, t: a.t }));
+    return { ok: true, local: true, open: o.open, posts: o.posts.filter(p => !p.hidden), answers, votes: { brush: this.bins(o.votes.brush), mist: this.bins(o.votes.mist), blur: this.bins(o.votes.blur), kz: this.bins(o.votes.kz) } };
   },
   async post(text, x, y) {
     const c = checkText(text); if (c.error) return { ok: false, error: c.error };
@@ -1797,6 +1841,20 @@ const Share = {
     if (r.ok) { Store.d.lastPostAt = now; Store.d.myPosts.push({ text: c.text, x, y, t: now }); Store.save(); this.kick(); }
     return r;
   },
+  /* 補完ラボの予想：1人・1お題につき1つ（書き直すと上書き） */
+  async answer(topic, text) {
+    const c = checkText(text); if (c.error) return { ok: false, error: c.error };
+    let r;
+    if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; r = await this.req({ action: 'answer', class: this.cls, client: Store.d.client, topic, text: c.text }, true); }
+    else {
+      const o = this.lload(); if (!o.open) return { ok: false, error: 'closed' };
+      o.answers = o.answers || []; const now = Date.now(), ex = o.answers.find(a => a.client === Store.d.client && a.topic === topic);
+      if (ex) { ex.text = c.text; ex.t = now; } else o.answers.push({ id: 'LA' + now.toString(36), topic, text: c.text, t: now, client: Store.d.client, hidden: false });
+      this.lsave(o); r = { ok: true };
+    }
+    if (r.ok) this.kick();
+    return r;
+  },
   async vote(kind, value) {
     value = clamp(Math.round(value), 0, 100);
     let r;
@@ -1809,14 +1867,14 @@ const Share = {
     if (this.mode === 'gas') { if (!this.cls) return { ok: false, error: 'class' }; return this.req(Object.assign({ action: 'admin', class: this.cls, pin, op }, extra), true); }
     const o = this.lload();
     switch (op) {
-      case 'hide': case 'unhide': { const p = o.posts.find(p => p.id === extra.id); if (p) p.hidden = op === 'hide'; break; }
-      case 'clear': o.posts = []; break;
-      case 'clearVotes': o.votes = { brush: {}, mist: {}, blur: {} }; break;
+      case 'hide': case 'unhide': { const p = o.posts.find(p => p.id === extra.id); if (p) p.hidden = op === 'hide'; else { const a = (o.answers || []).find(a => a.id === extra.id); if (a) a.hidden = op === 'hide'; } break; }
+      case 'clear': o.posts = []; o.answers = []; break;
+      case 'clearVotes': o.votes = { brush: {}, mist: {}, blur: {}, kz: {} }; break;
       case 'open': o.open = true; break;
       case 'close': o.open = false; break;
     }
     this.lsave(o); this.kick();
-    return { ok: true, open: o.open, posts: o.posts.map(p => ({ id: p.id, text: p.text, t: p.t, hidden: !!p.hidden })) };
+    return { ok: true, open: o.open, posts: o.posts.map(p => ({ id: p.id, text: p.text, t: p.t, hidden: !!p.hidden })), answers: (o.answers || []).map(a => ({ id: a.id, topic: a.topic, text: a.text, t: a.t, hidden: !!a.hidden })) };
   },
   /* --- ポーリング --- */
   subscribe(fn) { this.subs.add(fn); if (this.last) fn(this.last); this.kick(); return () => { this.subs.delete(fn); if (!this.subs.size) { clearTimeout(this.timer); this.timer = null; } }; },
@@ -1903,12 +1961,27 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && Clo
 window.addEventListener('pagehide', () => { if (Cloud.on) Cloud.flush(); });
 window.addEventListener('storage', e => { if (e.key && e.key.startsWith('kuuhaku.local.') && Share.subs.size) Share.kick(); });
 
-function renderHist(el, bins, mine) {
+/* 分布の描画。bins は 0〜9（10 刻み）の人数。cfg：axis/stat の要素、両端のことば ends、傾きのことば lean、いまのスライダー位置 cur() */
+function renderHist(el, bins, mine, cfg = {}) {
   bins = bins || Array(10).fill(0);
-  const max = Math.max(3, ...bins), mb = mine == null ? -1 : Math.min(9, Math.floor(mine / 10));
-  if (!bins.some(Boolean)) { el.innerHTML = '<p class="hempty">まだ記録がありません</p>'; return; }
-  el.innerHTML = bins.map((n, i) => { const h = (n / max * 100).toFixed(1) + '%'; return `<div class="bar${i === mb ? ' mine' : ''}" style="--h:${h}" aria-label="${i * 10}〜${i === 9 ? 100 : i * 10 + 9}：${n}人"><i style="height:${h}"></i><b>${n || ''}</b></div>`; }).join('');
+  const total = bins.reduce((a, b) => a + b, 0), max = Math.max(3, ...bins), mb = mine == null ? -1 : Math.min(9, Math.floor(mine / 10));
+  const cur = cfg.cur ? cfg.cur() : null;
+  const line = cur == null ? '' : `<span class="curline" style="left:${cur}%"><em style="transform:translateX(-${cur < 12 ? 0 : cur > 88 ? 100 : 50}%)">いま ${cur}</em></span>`;
+  el.innerHTML = (total ? bins.map((n, i) => { const h = (n / max * 100).toFixed(1) + '%'; return `<div class="bar${i === mb ? ' mine' : ''}" style="--h:${h}" aria-label="${i * 10}〜${i === 9 ? 100 : i * 10 + 9}：${n}人"><i style="height:${h}"></i><b>${n || ''}</b></div>`; }).join('') : '<p class="hempty">まだ記録がありません</p>') + line;
+  const ax = cfg.axis && $(cfg.axis);
+  if (ax) ax.innerHTML = `<div class="ticks2">${[0, 20, 40, 60, 80, 100].map(v => `<span style="left:${v}%;transform:translateX(-${v === 0 ? 0 : v === 100 ? 100 : 50}%)">${v}</span>`).join('')}</div>` + (cfg.ends ? `<div class="hist-labels"><span>${esc(cfg.ends[0])}</span><span>${esc(cfg.ends[1])}</span></div>` : '');
+  const st = cfg.stat && $(cfg.stat);
+  if (st) {
+    const parts = [];
+    if (total) { const top = Math.max(...bins), tops = bins.map((n, i) => n === top ? i : -1).filter(i => i >= 0); parts.push(`<b>${total}人</b>が記録`); parts.push(`いちばん多いのは <b>${tops.map(i => i * 10 + '〜' + (i === 9 ? 100 : i * 10 + 9)).join('・')}</b>（${top}人）`); }
+    if (mine != null) { const w = cfg.lean ? cfg.lean[mine < 34 ? 0 : mine < 67 ? 1 : 2] : ''; parts.push(`あなたは <b>${mine}</b>${w ? '（' + esc(w) + '）' : ''}`); }
+    st.innerHTML = parts.join('<span class="dot"> ｜ </span>'); st.hidden = !parts.length;
+  }
 }
+/* スライダーを動かしている間、「いま」の位置を動かす */
+function moveCur(sel, v) { const c = $(sel) && $(sel).querySelector('.curline'); if (!c) return; c.style.left = v + '%'; const em = c.querySelector('em'); em.textContent = 'いま ' + v; em.style.transform = `translateX(-${v < 12 ? 0 : v > 88 ? 100 : 50}%)`; }
+const BRUSH_CFG = { axis: '#brushAxis', stat: '#brushStat', ends: ['精緻（北宋画）', '荒い（等伯・破墨）'], lean: ['精緻寄り', '精緻と朦朧のあいだ', '荒い筆寄り'], cur: () => +$('#brushRange').value };
+const MIST_CFG = { axis: '#mistAxis', stat: '#mistStat', ends: ['すべて見える', '白い霧'], lean: ['よく見える寄り', '中くらい', '白い霧寄り'], cur: () => +$('#mistRange').value };
 function updateShareNotes() {
   const t = Share.mode === 'gas' ? `共有：${Share.label()}（約${CONFIG.POLL_MS / 1000}秒ごとに更新）` : '共有：端末内のみ（この端末の記録だけが表示されます。共有するには教員が GAS を設定します）';
   $$('[data-share-note]').forEach(e => e.textContent = t);
@@ -2088,8 +2161,8 @@ Screens.lab = {
     const L = Store.d.lab || {};
     $$('#kzAns button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kz === L.kz)));
     $('#hideGuess').value = L.hide || ''; $('#mangaGuess').value = L.manga || ''; $('#halfGuess').value = L.half || '';
-    renderBlurHist(null); labSummary();
-    this.unsub = Share.subscribe(st => { if (st.ok) renderBlurHist(st.votes && st.votes.blur); });
+    renderBlurHist(null); labSummary(); renderLabShares();
+    this.unsub = Share.subscribe(st => { if (st.ok) { renderBlurHist(st.votes && st.votes.blur); renderLabShares(st); } });
   },
   leave() { this.unsub && this.unsub(); this.unsub = null; },
   go(i) {
@@ -2101,6 +2174,44 @@ Screens.lab = {
     $('#labNext').textContent = labI === 4 ? '次へ：描き込みスライダー →' : '次の実験 →';
   },
 };
+/* ---- 補完ラボの結果をクラスで共有する ---- */
+const KZ_VAL = { '見えなかった': 10, '少し見えた': 50, '見えた': 90 };
+const LAB_SHARE = { hide: { sel: '#hideShare', title: '隠れていたものの予想' }, manga: { sel: '#mangaShare', title: '2コマのあいだの予想' }, half: { sel: '#halfShare', title: '上半分の予想' } };
+const labRevealed = tp => !!(Store.d.lab && Store.d.lab[tp + 'Rev']);
+function chipsHTML(list, myText, limit = 40) {
+  let markedMine = false;
+  const items = list.slice().reverse().slice(0, limit).map(a => { const mine = !markedMine && myText && a.text === myText; if (mine) markedMine = true; return `<li class="${mine ? 'mine' : ''}">${esc(a.text)}</li>`; });
+  if (myText && !markedMine) items.unshift(`<li class="mine">${esc(myText)}</li>`);
+  return `<ul class="chips2">${items.join('')}</ul>${list.length > limit ? `<p class="note" style="margin:.4rem 0 0">ほか ${list.length - limit} 件</p>` : ''}`;
+}
+function kzBarsHTML(bins, mine) {
+  const rows = [['見えた', 9], ['少し見えた', 5], ['見えなかった', 1]], max = Math.max(3, ...rows.map(r => bins[r[1]] || 0));
+  return rows.map(([lab, i]) => `<div class="kzrow${mine === lab ? ' mine' : ''}"><span>${lab}</span><i style="width:${((bins[i] || 0) / max * 100).toFixed(1)}%"></i><b>${bins[i] || 0}人</b></div>`).join('');
+}
+function renderLabShares(st) {
+  st = st || Share.last || {}; const ans = st.answers || {}, mine = Store.d.lab || {};
+  for (const [tp, c] of Object.entries(LAB_SHARE)) {
+    const el = $(c.sel); if (!el) continue;
+    if (!labRevealed(tp)) { el.hidden = true; continue; }
+    const list = ans[tp] || [], n = list.length + (mine[tp] && !list.some(a => a.text === mine[tp]) ? 1 : 0);
+    el.hidden = false; el.innerHTML = `<h3>みんなの${c.title}（${n}人）</h3>` + (n ? chipsHTML(list, mine[tp]) : '<p class="hempty">まだ予想がありません</p>');
+  }
+  const kz = $('#kzShare'); if (!kz) return;
+  if (!mine.kz) { kz.hidden = true; return; }
+  const bins = (st.votes && st.votes.kz) || Array(10).fill(0), total = [1, 5, 9].reduce((a, i) => a + (bins[i] || 0), 0);
+  kz.hidden = false; kz.innerHTML = `<h3>みんなの答え（${total}人）</h3>` + kzBarsHTML(bins, mine.kz);
+}
+/* 予想を共有する。古い GAS（answer を知らない）でも、ほかの機能は止めない */
+async function shareAnswer(topic, text) {
+  if (!text) { renderLabShares(); return; }
+  const r = await Share.answer(topic, text);
+  if (!r.ok) {
+    if (r.error === 'unknown') toast('共有先が古い版のため、予想はこの端末にだけ残ります（先生に GAS の更新をお願いします）', 4500);
+    else if (r.error === 'closed') toast('いまは受付を停止しています');
+    else if (!['rate', 'class'].includes(r.error)) toast(errMsg(r.error));
+  }
+  renderLabShares();
+}
 function labSet(k, v) { const L = Object.assign({}, Store.d.lab); L[k] = v; Store.set('lab', L); labSummary(); if (current === 'lab') renderJourney('lab'); }
 function labSummary() {
   const L = Store.d.lab || {}, el = $('#labSum');
@@ -2113,15 +2224,16 @@ function renderBlurHist(bins) {
   const five = [1, 3, 5, 7, 9].map(i => bins[i] || 0), max = Math.max(3, ...five), mine = Store.d.lab && Store.d.lab.blur;
   $('#blurHist').innerHTML = five.map((n, i) => { const h = (n / max * 100).toFixed(1) + '%'; return `<div class="bar${mine === i + 1 ? ' mine' : ''}" style="--h:${h}" aria-label="${i + 1}段階目：${n}人"><i style="height:${h}"></i><b>${n || ''}</b></div>`; }).join('');
 }
-$('#kzAns').addEventListener('click', e => { const b = e.target.closest('button[data-kz]'); if (!b) return; $$('#kzAns button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); labSet('kz', b.dataset.kz); });
-$('#hideGuess').addEventListener('change', e => labSet('hide', e.target.value.trim().slice(0, 30)));
-$('#mangaGuess').addEventListener('change', e => labSet('manga', e.target.value.trim().slice(0, 30)));
-$('#halfGuess').addEventListener('change', e => labSet('half', e.target.value.trim().slice(0, 30)));
+$('#kzAns').addEventListener('click', async e => { const b = e.target.closest('button[data-kz]'); if (!b) return; $$('#kzAns button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); labSet('kz', b.dataset.kz); renderLabShares(); const r = await Share.vote('kz', KZ_VAL[b.dataset.kz]); if (!r.ok && r.error === 'unknown') toast('共有先が古い版のため、答えはこの端末にだけ残ります（先生に GAS の更新をお願いします）', 4500); renderLabShares(); });
+$('#hideGuess').addEventListener('change', e => { const v = e.target.value.trim().slice(0, 30); labSet('hide', v); if (labRevealed('hide')) shareAnswer('hide', v); });
+$('#mangaGuess').addEventListener('change', e => { const v = e.target.value.trim().slice(0, 30); labSet('manga', v); if (labRevealed('manga')) shareAnswer('manga', v); });
+$('#halfGuess').addEventListener('change', e => { const v = e.target.value.trim().slice(0, 30); labSet('half', v); if (labRevealed('half')) shareAnswer('half', v); });
 $('#halfBtn').addEventListener('click', e => {
   const w = $('#halfWrap'), open = !w.classList.contains('open'), b = e.currentTarget;
   if (open && $('#halfGuess').value.trim()) labSet('half', $('#halfGuess').value.trim().slice(0, 30));
   if (open && !$('#halfGuess').value.trim() && !b.dataset.nudged) { b.dataset.nudged = '1'; $('#halfNote').textContent = 'めくる前に、予想を一言だけ書いてみよう（書かずにめくることもできます。もう一度押してください）。'; $('#halfGuess').focus(); return; }
   w.classList.toggle('open', open); b.setAttribute('aria-pressed', String(open)); b.textContent = open ? 'もう一度隠す' : '上半分をめくる';
+  if (open) { labSet('halfRev', 1); shareAnswer('half', ($('#halfGuess').value || '').trim().slice(0, 30)); }
   $('#halfNote').textContent = open ? '上半分には、空をおおうほどの大きな鷲。下半分の静かな雪の原から、この鷲を思い浮かべた人は少ないはずです。私たちは見えている所から「続き」を補いますが、補えるのは自分の経験の範囲まで。白の向こうには、その想像を超えるものも隠れています。予想と比べて、どう感じただろう。' : '';
 });
 $('#blurGot').addEventListener('click', async e => {
@@ -2171,7 +2283,7 @@ function drawHide() {
     g.drawImage(t2, 0, 0);
   }
 }
-$('#hideBtn').addEventListener('click', e => { if ($('#hideGuess').value.trim()) labSet('hide', $('#hideGuess').value.trim().slice(0, 30)); hideOpen = !hideOpen; e.currentTarget.setAttribute('aria-pressed', String(hideOpen)); e.currentTarget.textContent = hideOpen ? 'もう一度隠す' : '霧を晴らす'; drawHide(); $('#hideNote').textContent = hideOpen ? '想像した松と同じでしたか？ 隠れていたあいだも、あなたの頭の中には何かが「あった」はずです。' : ''; });
+$('#hideBtn').addEventListener('click', e => { if ($('#hideGuess').value.trim()) labSet('hide', $('#hideGuess').value.trim().slice(0, 30)); hideOpen = !hideOpen; if (hideOpen) { labSet('hideRev', 1); shareAnswer('hide', ($('#hideGuess').value || '').trim().slice(0, 30)); } e.currentTarget.setAttribute('aria-pressed', String(hideOpen)); e.currentTarget.textContent = hideOpen ? 'もう一度隠す' : '霧を晴らす'; drawHide(); $('#hideNote').textContent = hideOpen ? '想像した松と同じでしたか？ 隠れていたあいだも、あなたの頭の中には何かが「あった」はずです。' : ''; });
 /* 墨で描いた、すわる猫。濃い墨の面で姿をつくり、胸・口もと・目は墨を抜いて紙の白を残す */
 function drawCat(g, W, H) {
   g.drawImage(Tex.paper(W, H), 0, 0, W, H);
@@ -2254,7 +2366,7 @@ function buildManga() {
   /* 手描きの揺らぎ：線用（mgWob）と枠用（mgFrame）。幾何学の錯視（カニッツァ）には使わない */
   const defs = `<svg class="mgdefs" width="0" height="0" aria-hidden="true" focusable="false"><defs><filter id="mgWob" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".06" numOctaves="2" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.4" xChannelSelector="R" yChannelSelector="G"/></filter><filter id="mgFrame" x="-3%" y="-3%" width="106%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter></defs></svg>`;
   $('#manga').innerHTML = defs + `<div class="koma">${k1}</div><button type="button" class="koma gap" id="mangaGap">ここで<br>何が？<br>（タップ）</button><div class="koma">${k2}</div>`;
-  $('#mangaGap').addEventListener('click', e => { const b = e.currentTarget; if (b.dataset.open) { buildManga(); $('#mangaNote').textContent = ''; return; } if ($('#mangaGuess').value.trim()) labSet('manga', $('#mangaGuess').value.trim().slice(0, 30)); b.dataset.open = '1'; b.classList.remove('gap'); b.innerHTML = mid; $('#mangaNote').textContent = 'マンガでは、コマとコマの間の「描かれていない時間」を読者が補っています。描かないことで、読者の想像が動きだします。'; });
+  $('#mangaGap').addEventListener('click', e => { const b = e.currentTarget; if (b.dataset.open) { buildManga(); $('#mangaNote').textContent = ''; return; } if ($('#mangaGuess').value.trim()) labSet('manga', $('#mangaGuess').value.trim().slice(0, 30)); b.dataset.open = '1'; labSet('mangaRev', 1); shareAnswer('manga', ($('#mangaGuess').value || '').trim().slice(0, 30)); b.classList.remove('gap'); b.innerHTML = mid; $('#mangaNote').textContent = 'マンガでは、コマとコマの間の「描かれていない時間」を読者が補っています。描かないことで、読者の想像が動きだします。'; });
 }
 
 /* ---------- 描き込みスライダー ---------- */
@@ -2278,29 +2390,29 @@ function drawBrush() {
   $('#brushOut').textContent = Math.round(d * 100);
   $('#brushCap').textContent = d < 0.3 ? '北宋画のように：針葉を一本ずつ描き込む' : d < 0.68 ? '南宋画のように：「精緻」と「朦朧」が交錯する' : '等伯・破墨のように：荒くすばやい筆の打ち込み';
 }
-function brushMine() { $('#brushMine').textContent = Store.d.brushVote == null ? '' : `あなたの投票：${Store.d.brushVote}`; }
+function brushMine() { $('#brushMine').textContent = Store.d.brushVote == null ? '' : `あなたの投票：${Store.d.brushVote} ／ 下のグラフの赤い点が、その位置`; }
 Screens.brush = {
   title: '描き込みスライダー',
   enter() {
     if (Store.d.brushVote != null && !this.touched) $('#brushRange').value = Store.d.brushVote;
     requestAnimationFrame(drawBrush); brushMine(); updateShareNotes();
-    renderHist($('#brushHist'), null, Store.d.brushVote);
-    brushUnsub = Share.subscribe(s => { if (s.ok) renderHist($('#brushHist'), s.votes && s.votes.brush, Store.d.brushVote); });
+    renderHist($('#brushHist'), null, Store.d.brushVote, BRUSH_CFG);
+    brushUnsub = Share.subscribe(s => { if (s.ok) renderHist($('#brushHist'), s.votes && s.votes.brush, Store.d.brushVote, BRUSH_CFG); });
   },
   leave() { brushUnsub && brushUnsub(); brushUnsub = null; },
   resize() { drawBrush(); },
 };
-$('#brushRange').addEventListener('input', () => { Screens.brush.touched = true; if (!brushRaf) brushRaf = requestAnimationFrame(drawBrush); });
+$('#brushRange').addEventListener('input', () => { moveCur('#brushHist', +$('#brushRange').value); Screens.brush.touched = true; if (!brushRaf) brushRaf = requestAnimationFrame(drawBrush); });
 $('#brushVote').addEventListener('click', async e => {
   const v = +$('#brushRange').value, b = e.currentTarget; b.disabled = true;
   const r = await Share.vote('brush', v); b.disabled = false;
-  if (r.ok) { Store.set('brushVote', v); brushMine(); $('#brushMine').textContent += '（記録しました）'; toast(`${v} に投票しました`); renderJourney('brush'); }
+  if (r.ok) { Store.set('brushVote', v); renderHist($('#brushHist'), Share.last && Share.last.votes && Share.last.votes.brush, v, BRUSH_CFG); brushMine(); $('#brushMine').textContent += ' ／ 記録しました'; toast(`${v} に投票しました`); renderJourney('brush'); }
   else $('#brushMine').textContent = errMsg(r.error);
 });
 
 /* ---------- 霧の松林 ---------- */
 let forest = null, forestUnsub = null;
-function setMist(v) { $('#mistOut').textContent = v; if (forest) forest.mist = v / 100; $('#overBadge').hidden = v > 6; Sound.mist(v / 100); if (forest && v < 40) { forest.walked = true; $('#coach').classList.add('gone'); } }
+function setMist(v) { moveCur('#mistHist', v); $('#mistOut').textContent = v; if (forest) forest.mist = v / 100; $('#overBadge').hidden = v > 6; Sound.mist(v / 100); if (forest && v < 40) { forest.walked = true; $('#coach').classList.add('gone'); } }
 Screens.forest = {
   title: '霧の松林をあるく',
   enter() {
@@ -2311,8 +2423,8 @@ Screens.forest = {
     if (Store.d.sound) Sound.set(true);
     Sound.mist(+$('#mistRange').value / 100);
     this.syncSound(); updateShareNotes();
-    renderHist($('#mistHist'), null, Store.d.mistBest);
-    forestUnsub = Share.subscribe(s => { if (s.ok) renderHist($('#mistHist'), s.votes && s.votes.mist, Store.d.mistBest); });
+    renderHist($('#mistHist'), null, Store.d.mistBest, MIST_CFG);
+    forestUnsub = Share.subscribe(s => { if (s.ok) renderHist($('#mistHist'), s.votes && s.votes.mist, Store.d.mistBest, MIST_CFG); });
   },
   leave() { forest && forest.stop(); Sound.set(false); forestUnsub && forestUnsub(); forestUnsub = null; },
   resize() { forest && forest.resize(); },
@@ -2332,7 +2444,7 @@ document.addEventListener('keydown', e => { if (current !== 'forest' || !forest 
 $('#mistRec').addEventListener('click', async e => {
   const v = +$('#mistRange').value, b = e.currentTarget; b.disabled = true;
   const r = await Share.vote('mist', v); b.disabled = false;
-  if (r.ok) { Store.set('mistBest', v); $('#mistMine').textContent = `あなたの記録：${v}（記録しました）`; toast(`霧の濃さ ${v} を記録しました`); renderJourney('forest'); }
+  if (r.ok) { Store.set('mistBest', v); renderHist($('#mistHist'), Share.last && Share.last.votes && Share.last.votes.mist, v, MIST_CFG); $('#mistMine').textContent = `あなたの記録：${v}（記録しました）`; toast(`霧の濃さ ${v} を記録しました`); renderJourney('forest'); }
   else $('#mistMine').textContent = errMsg(r.error);
 });
 
@@ -2395,13 +2507,23 @@ Screens.proj = {
       if (!s.ok) { $('#projInfo').textContent = errMsg(s.error); return; }
       wordsFrom(s, projForest);
       $('#projInfo').textContent = `白の向こうに ── ${Share.mode === 'gas' ? 'クラス ' + Share.cls : '端末内'}・${(s.posts || []).length}の言葉${s.open === false ? '（受付停止中）' : ''}`;
-      renderHist($('#projBrushHist'), s.votes && s.votes.brush); renderHist($('#projMistHist'), s.votes && s.votes.mist);
+      renderHist($('#projBrushHist'), s.votes && s.votes.brush, null, { axis: '#projBrushAxis', stat: '#projBrushStat', ends: ['精緻', '荒い'] }); renderHist($('#projMistHist'), s.votes && s.votes.mist, null, { axis: '#projMistAxis', stat: '#projMistStat', ends: ['すべて見える', '白い霧'] }); renderProjLab(s);
     });
   },
   fit() { if (projForest && projForest.W > 0) projForest.wordOpt = { size: clamp(Math.round(projForest.W / 30), 20, 52), max: 12 }; else if (projForest) projForest.wordOpt = { size: 0, max: 12 }; },
   leave() { Sound.set(false); projForest && projForest.stop(); projUnsub && projUnsub(); projUnsub = null; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); },
   resize() { projForest && projForest.resize(); this.fit(); },
 };
+let projLabTab = 'kz';
+function renderProjLab(st) {
+  const box = $('#projLabBody'); if (!box) return; st = st || Share.last || {};
+  if (projLabTab === 'kz') { const bins = (st.votes && st.votes.kz) || Array(10).fill(0), total = [1, 5, 9].reduce((a, i) => a + (bins[i] || 0), 0); box.innerHTML = `<h3 style="margin:.2rem 0 .4rem">白い三角形は、見えましたか？（${total}人）</h3>` + (total ? kzBarsHTML(bins, null) : '<p class="hempty">まだ答えがありません</p>'); return; }
+  const c = LAB_SHARE[projLabTab], list = (st.answers && st.answers[projLabTab]) || [];
+  box.innerHTML = `<h3 style="margin:.2rem 0 .4rem">${c.title}（${list.length}人）</h3>` + (list.length ? chipsHTML(list, null, 24) : '<p class="hempty">まだ予想がありません</p>');
+}
+$('#projLabBtn').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); $('#projLabBox').hidden = !on; if (on) { $('#projHistBox').hidden = true; $('#projHistBtn').setAttribute('aria-pressed', 'false'); renderProjLab(); } });
+$('#projLabTabs').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (!b) return; projLabTab = b.dataset.t; $$('#projLabTabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderProjLab(); });
+$('#projHistBtn').addEventListener('click', e => { if (e.currentTarget.getAttribute('aria-pressed') !== 'true') { $('#projLabBox').hidden = true; $('#projLabBtn').setAttribute('aria-pressed', 'false'); } });
 $('#projHistBtn').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); $('#projHistBox').hidden = !on; });
 $('#projWalk').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); projForest.auto = on ? 0.12 : 0; });
 $('#projSound').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; if (Sound.set(on) || !on) { e.currentTarget.setAttribute('aria-pressed', String(on)); Sound.mist(0.74); } });
@@ -2838,7 +2960,9 @@ $('#tClasses').addEventListener('change', e => { Store.set('classList', parseCla
 $('#tClassLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; e.preventDefault(); const label = b.textContent; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { toast('コピーできませんでした', 3000); } setTimeout(() => { b.textContent = label; }, 1500); });
 $('#tLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { toast('コピーできませんでした。下の欄から選んでコピーしてください', 4000); } setTimeout(() => { b.textContent = 'コピー'; }, 1500); });
 function tRefreshCfg() { renderLinks(); { const dom = !EMBED && isDomainGas(Share.url); $('#tDomainNote').hidden = !dom; if (dom) $('#tOpenGas').href = Share.url.split('?')[0] + '?' + (Share.cls ? 'class=' + encodeURIComponent(Share.cls) + '&' : '') + 'scene=teacher'; } if (EMBED) { $('#tEmbedNote').hidden = false; for (const id of ['#tGas', '#tGasSave']) { const el = $(id); (el.closest('.field') || el).hidden = true; el.hidden = true; } $('label[for=tGas]').hidden = true; } $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
+const TOPIC_NAME = { hide: '隠した絵', manga: '2コマ', half: '上半分' };
 function tRender(r) {
+  { const an = r.answers || []; $('#tACount').textContent = an.length; $('#tAnswers').innerHTML = an.length ? an.slice().reverse().map(a => `<li class="${a.hidden ? 'hid' : ''}"><small>${esc(TOPIC_NAME[a.topic] || a.topic)}</small><span>${esc(a.text)}</span><button class="btn" data-id="${esc(a.id)}" data-op="${a.hidden ? 'unhide' : 'hide'}">${a.hidden ? '再表示' : '非表示'}</button></li>`).join('') : '<li class="note">まだ予想はありません</li>'; }
   $('#tPanel').hidden = false; $('#tOpen').textContent = r.open === false ? '停止中' : '受付中';
   const posts = r.posts || []; $('#tCount').textContent = posts.length;
   $('#tPosts').innerHTML = posts.length ? posts.slice().reverse().map(p => `<li class="${p.hidden ? 'hid' : ''}"><span>${esc(p.text)}</span><small>${new Date(+p.t).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</small><button class="btn" data-id="${esc(p.id)}" data-op="${p.hidden ? 'unhide' : 'hide'}">${p.hidden ? '再表示' : '非表示'}</button></li>`).join('') : '<li class="note">まだ投稿はありません</li>';
@@ -2861,6 +2985,7 @@ $('#tLogin').addEventListener('click', () => {
   tRefreshCfg(); tDo('list');
 });
 $('#tPosts').addEventListener('click', e => { const b = e.target.closest('button[data-op]'); if (b) tDo(b.dataset.op, { id: b.dataset.id }); });
+$('#tAnswers').addEventListener('click', e => { const b = e.target.closest('button[data-op]'); if (b) tDo(b.dataset.op, { id: b.dataset.id }); });
 $('#tOpenBtn').addEventListener('click', () => tDo('open'));
 $('#tCloseBtn').addEventListener('click', () => tDo('close'));
 $('#tReload').addEventListener('click', () => tDo('list'));
