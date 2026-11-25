@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read      # 成果物が一覧に出たかを確かめるため
 
 concurrency:
   group: pages
@@ -45,6 +46,17 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+      - name: 成果物が一覧に出るまで待つ（アップロード直後は反映が遅れて「0件」になることがあるため）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 30); do
+            n=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts?name=github-pages" --jq '.total_count' 2>/dev/null || echo 0)
+            echo "確認 $i 回目：成果物 ${n} 件"
+            if [ "${n:-0}" -ge 1 ]; then sleep 3; exit 0; fi
+            sleep 4
+          done
+          echo "成果物がまだ一覧に出ませんが、続けて公開を試みます"
       - name: 公開
         id: deployment
         uses: actions/deploy-pages@v5
