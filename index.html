@@ -763,6 +763,7 @@ dialog.settings{border:none;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0
   <div class="card">
     <h3 style="margin-top:0">共有の設定（この端末）</h3>
     <p class="share-note" id="tMode"></p>
+    <div class="card" id="tDomainNote" hidden style="border:2px solid #7a2b22;margin:6px 0 10px"><p style="margin:0 0 8px"><b>この画面（GitHub Pages）からは、この GAS につながりません。</b><br>学校のドメイン内だけに公開した GAS は、GAS の URL を直接開いて使います。</p><a class="btn primary" id="tOpenGas" target="_blank" rel="noopener">GAS の URL を直接開く（教員用の画面）</a></div>
     <p class="note" id="tEmbedNote" hidden>このページは Apps Script から配信されています。共有先の設定は要りません（いまの通信は、ログイン中の学校アカウントで行われます）。生徒には、下の「生徒に配るリンク」を配ってください。</p>
     <label for="tGas" class="note">GAS ウェブアプリの URL（<code>https://script.google.com/macros/s/…/exec</code>）。空にすると「端末内のみ」。</label>
     <div class="field"><input id="tGas" class="wide" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/……/exec"></div>
@@ -1700,8 +1701,13 @@ const ERR = {
   locked: 'PIN のまちがいが続いたため、10分間受け付けません。', nopin: 'GAS 側でスクリプト プロパティ TEACHER_PIN が設定されていません。', server: '共有先でエラーが起きました。先生に知らせてください。', unknown: '共有先が古い版かもしれません。',
 };
 const errMsg = e => ERR[e] || ('エラー：' + e);
+/* 学校（Google Workspace）のドメイン内だけに公開した GAS の URL は、https://script.google.com/a/… の形になる。
+   このタイプの GAS は、GitHub Pages のページから fetch では読めない（ログイン画面へ飛ばされる）。GAS の URL を直接開く。 */
+const isDomainGas = u => /^https:\/\/script\.google\.com\/a\//.test(String(u || ''));
+const DOMAIN_GAS_MSG = 'この URL は、学校のドメイン内だけに公開した GAS です。GitHub Pages のこのページからは、仕組み上つながりません（ログイン画面に飛ばされるため）。\n【やること】この GAS の URL を直接開き、そこに表示される教材の「教員用」から操作してください（下の「GAS の URL を直接開く」ボタン）。生徒にも、GitHub Pages のリンクではなく、GAS の URL を配ります。書き込みや投票がスプレッドシートに届いていれば、GAS 側は正常です。';
 /* 先生向け：つながらない理由と、直し方 */
 function diagnose(r, url) {
+  if (!EMBED && isDomainGas(url) && ['blocked', 'html', 'http', 'network'].includes(r.error)) return DOMAIN_GAS_MSG;
   const dev = /\/dev(\?|$)/.test(url || '');
   switch (r.error) {
     case 'blocked':
@@ -2815,6 +2821,7 @@ function askConfirm(msg) {
 let tPin = ''; try { tPin = sessionStorage.getItem('kuuhaku.pin') || ''; } catch (e) {}
 function studentLink(scene, cls = Share.cls) {
   if (EMBED) { const base = window.KUUHAKU_SELF || location.href.split('#')[0]; const q = []; if (cls) q.push('class=' + encodeURIComponent(cls)); if (scene) q.push('scene=' + scene); return base + (q.length ? '?' + q.join('&') : ''); }
+  if (isDomainGas(Share.url)) { const q = []; if (cls) q.push('class=' + encodeURIComponent(cls)); if (scene) q.push('scene=' + scene); return Share.url.split('?')[0] + (q.length ? '?' + q.join('&') : ''); }
   const u = new URL(location.href); u.hash = ''; u.search = ''; if (cls) u.searchParams.set('class', cls); if (Share.url) u.searchParams.set('gas', Share.url); return u.toString() + (scene ? '#/' + scene : '');
 }
 const SCENES = [['check/pre', '前 うめたい度チェック'], ['lab', '1 補完ラボ'], ['brush', '2 描き込みスライダー'], ['forest', '3 霧の松林・靄スライダー'], ['real', '実物を見る'], ['byobu', '屏風モード'], ['write', '4 白の向こうに書く'], ['check/post', 'うめたい度（後）'], ['reflect', '5 振り返り'], ['proj', '投影モード']];
@@ -2828,7 +2835,7 @@ function parseClasses(t) { return [...new Set(String(t).toUpperCase().split(/[\s
 $('#tClasses').addEventListener('change', e => { Store.set('classList', parseClasses(e.target.value).join(',')); renderLinks(); });
 $('#tClassLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; e.preventDefault(); const label = b.textContent; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { toast('コピーできませんでした', 3000); } setTimeout(() => { b.textContent = label; }, 1500); });
 $('#tLinks').addEventListener('click', async e => { const b = e.target.closest('button[data-link]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.link); b.textContent = 'コピーしました'; } catch (_) { toast('コピーできませんでした。下の欄から選んでコピーしてください', 4000); } setTimeout(() => { b.textContent = 'コピー'; }, 1500); });
-function tRefreshCfg() { renderLinks(); if (EMBED) { $('#tEmbedNote').hidden = false; for (const id of ['#tGas', '#tGasSave']) { const el = $(id); (el.closest('.field') || el).hidden = true; el.hidden = true; } $('label[for=tGas]').hidden = true; } $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
+function tRefreshCfg() { renderLinks(); { const dom = !EMBED && isDomainGas(Share.url); $('#tDomainNote').hidden = !dom; if (dom) $('#tOpenGas').href = Share.url.split('?')[0] + '?' + (Share.cls ? 'class=' + encodeURIComponent(Share.cls) + '&' : '') + 'scene=teacher'; } if (EMBED) { $('#tEmbedNote').hidden = false; for (const id of ['#tGas', '#tGasSave']) { const el = $(id); (el.closest('.field') || el).hidden = true; el.hidden = true; } $('label[for=tGas]').hidden = true; } $('#tMode').textContent = '現在：' + (Share.mode === 'gas' ? 'GAS で共有' : '端末内のみ'); $('#tGas').value = Store.d.gasUrl || CONFIG.GAS_URL || ''; $('#tLink').value = studentLink(); $('#tClass').value = Share.cls; }
 function tRender(r) {
   $('#tPanel').hidden = false; $('#tOpen').textContent = r.open === false ? '停止中' : '受付中';
   const posts = r.posts || []; $('#tCount').textContent = posts.length;
@@ -2863,10 +2870,11 @@ $('#tGasSave').addEventListener('click', () => {
   if (!validGas(u)) { m.textContent = 'https://script.google.com/ で始まる URL を入れてください。'; m.className = 'msg err'; return; }
   if (u && /\/dev(\?|$)/.test(u)) { m.textContent = '末尾が /dev の URL は、自分だけが使う試験用です。デプロイ画面の【ウェブアプリ】の URL（末尾が /exec）を入れてください。'; m.className = 'msg err'; return; }
   if (u && !/\/exec(\?|$)/.test(u)) { m.textContent = 'URL の末尾が /exec になっていません。デプロイ画面の【ウェブアプリ】の URL を、最後までコピーしてください。'; m.className = 'msg err'; return; }
-  Store.set('gasUrl', u); Share.last = null; m.textContent = u ? '保存しました。「接続を確かめる」で確認できます。' : '端末内のみにしました。'; m.className = 'msg'; tRefreshCfg();
+  Store.set('gasUrl', u); Share.last = null; m.textContent = u ? (isDomainGas(u) ? '保存しました。この URL は学校のドメイン内だけの GAS です。上の「GAS の URL を直接開く」から操作してください。' : '保存しました。「接続を確かめる」で確認できます。') : '端末内のみにしました。'; m.className = 'msg'; tRefreshCfg();
 });
 $('#tPing').addEventListener('click', async () => {
   const m = $('#tGasMsg'); if (Share.mode !== 'gas') { m.textContent = 'GAS の URL が設定されていません。'; return; }
+  if (!EMBED && isDomainGas(Share.url)) { m.textContent = DOMAIN_GAS_MSG; m.className = 'msg err'; m.style.whiteSpace = 'pre-line'; return; }
   m.textContent = '確かめています…'; m.className = 'msg'; const r = await Share.req({ action: 'ping' });
   m.textContent = r.ok ? `つながりました（版 ${r.version}${r.version && r.version < '1.1' ? '：古い版です。gas/Code.gs の最新に更新してください' : ''}）` : diagnose(r, Share.url); m.className = r.ok ? 'msg' : 'msg err';
   m.style.whiteSpace = 'pre-line';
@@ -2881,6 +2889,13 @@ $('#tLinkCopy').addEventListener('click', async () => { const t = $('#tLink').va
   const p = new URLSearchParams(location.search); let changed = false;
   if (EMBED) { for (const k of ['class', 'lesson', 'q']) if (EPARAMS[k] && !p.has(k)) p.set(k, EPARAMS[k]); if (EPARAMS.scene && !location.hash) { try { location.hash = '#/' + EPARAMS.scene.replace(/[^a-z\/]/g, ''); } catch (e) {} } }
   if (p.has('class')) { Store.d.classCode = p.get('class').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 16); changed = true; }
+  if (!EMBED && p.has('gas') && isDomainGas(p.get('gas').trim()) && !p.has('stay')) {
+    /* 学校のドメイン内だけの GAS は、GitHub Pages のページからは読めない。GAS が配信する教材のページへ移る */
+    const cls = (p.get('class') || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 16), sc = location.hash.replace(/^#\/?/, '').replace(/[^a-z\/]/g, '');
+    const q = []; if (cls) q.push('class=' + encodeURIComponent(cls)); if (sc) q.push('scene=' + sc);
+    document.body.innerHTML = '<p style="font:16px/1.8 sans-serif;padding:30vh 24px 0;text-align:center">学校のアカウントで開く教材のページへ移動しています…</p>';
+    location.replace(p.get('gas').trim().split('?')[0] + (q.length ? '?' + q.join('&') : '')); return;
+  }
   if (p.has('gas') && validGas(p.get('gas').trim())) { Store.d.gasUrl = p.get('gas').trim(); changed = true; }
   if (p.has('lesson')) { Store.d.lesson = p.get('lesson') === '1'; changed = true; }
   if (changed) { Store.save(); const keep = p.get('q'); try { history.replaceState(null, '', location.pathname + (keep ? '?q=' + keep : '') + location.hash); } catch (e) {} }

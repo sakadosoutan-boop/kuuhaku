@@ -620,6 +620,38 @@ async function embedFlow(browser, base) {
   assert.deepStrictEqual(page.errors, [], 'コンソールエラー'); await ctx.close();
 }
 
+async function domainFlow(browser, base) {
+  console.log('[学校ドメイン限定の GAS を、GitHub Pages のページに入れた場合]');
+  const DOM = 'https://script.google.com/a/macros/spec.ed.jp/s/AKfycbyrPbJyC/exec';
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, locale: 'ja-JP' });
+  const page = await ctx.newPage(); const errs = [];
+  page.on('pageerror', e => errs.push(e.message)); const hits = [];
+  /* 本物の GAS は、ログイン情報のない通信をログイン画面へ飛ばす（fetch は CORS で失敗する）。それを模擬する */
+  await page.route(DOM + '**', r => { hits.push(r.request().url()); if (r.request().resourceType() === 'fetch' || r.request().resourceType() === 'xhr') return r.abort('failed'); return r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>GAS</title><p>GAS が配信するページ</p>' }); });
+  await step('生徒に配った古い形のリンク（GitHub Pages ?class&gas=…）は、GAS のページへ自動で転送される', async () => {
+    await page.goto(base.split('#')[0] + '?class=25&gas=' + encodeURIComponent(DOM) + '#/brush', { waitUntil: 'commit' });
+    await page.waitForURL(u => u.href.startsWith(DOM), { timeout: 15000 });
+    assert.strictEqual(page.url(), DOM + '?class=25&scene=brush');
+    assert.ok(hits.some(u => u === DOM + '?class=25&scene=brush'));
+  });
+  await step('教員用：ドメイン限定の GAS だと分かり、GAS の URL を直接開くよう案内する', async () => {
+    await page.goto(base.split('#')[0] + '?class=25&stay=1#/teacher'); await page.waitForSelector('#s-teacher.on');
+    await page.evaluate(u => { Store.d.gasUrl = u; Store.d.classCode = '25'; Store.save(); }, DOM); await page.reload({ waitUntil: 'load' }); await page.waitForSelector('#s-teacher.on');
+    assert.ok(await page.isVisible('#tDomainNote'), '案内が出ていない');
+    assert.strictEqual(await page.getAttribute('#tOpenGas', 'href'), DOM + '?class=25&scene=teacher');
+    assert.strictEqual(await page.inputValue('#tLink'), DOM + '?class=25', '生徒に配るリンクが GAS の URL になっていない（GitHub Pages のリンクのまま）');
+    assert.match(await page.getAttribute('#tLinks li:nth-child(4) button', 'data-link'), new RegExp('^' + DOM.replace(/[.\/]/g, '\\$&') + '\\?class=25&scene=forest$'));
+    await page.click('#tPing'); await page.waitForTimeout(300);
+    const t = await page.textContent('#tGasMsg'); assert.match(t, /ドメイン内だけに公開した GAS/); assert.match(t, /直接開き/); assert.doesNotMatch(t, /【全員】になっているか/, '「全員にしてください」と案内してはいけない（この学校では選べない）');
+    await page.screenshot({ path: path.join(SHOTS, 'domain-teacher.png') });
+  });
+  await step('生徒（ドメイン限定の GAS を保存した端末）の画面は、専門語を出さず短く伝える', async () => {
+    await open(page, base, 'write'); await page.waitForTimeout(1500);
+    const note = await page.textContent('#s-write [data-share-note]'); assert.doesNotMatch(note, /デプロイ|CORS|ドメイン/);
+  });
+  assert.deepStrictEqual(errs, []); await ctx.close();
+}
+
 (async () => {
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}/index.html`;
@@ -628,6 +660,7 @@ async function embedFlow(browser, base) {
     const only = process.env.ONLY || '';   // 開発用：ONLY=embed で GAS 配信の部分だけ実行
     if (!only) { await localFlow(browser, base, { width: 360, height: 740 }, 'phone'); await localFlow(browser, base, { width: 1366, height: 768 }, 'chromebook'); await gasFlow(browser, base); }
     if (!only || only === 'embed') await embedFlow(browser, base);
+    if (!only || only === 'embed' || only === 'domain') await domainFlow(browser, base);
     console.log(`E2E: ${count} 件すべて成功。スクリーンショット: tests/screenshots/`);
   } catch (e) { console.error('失敗:', e); process.exitCode = 1; }
   finally { await browser.close(); srv.close(); }
